@@ -69,7 +69,7 @@ function Copy-ToVm {
         [Parameter(Mandatory = $true)][string]$LocalPath,
         [Parameter(Mandatory = $true)][string]$RemotePath
     )
-    & scp -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes $LocalPath "$($Vm.Target):$RemotePath"
+    & scp -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 $LocalPath "$($Vm.Target):$RemotePath"
     if ($LASTEXITCODE -ne 0) {
         throw "scp failed: $LocalPath -> $($Vm.Target):$RemotePath"
     }
@@ -80,7 +80,7 @@ function Invoke-VmCommand {
         [Parameter(Mandatory = $true)][psobject]$Vm,
         [Parameter(Mandatory = $true)][string]$Command
     )
-    & ssh -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes $Vm.Target $Command
+    & ssh -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 $Vm.Target $Command
     if ($LASTEXITCODE -ne 0) {
         throw "ssh command failed (exit $LASTEXITCODE): $Command"
     }

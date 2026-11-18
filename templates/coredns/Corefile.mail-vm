@@ -1,0 +1,58 @@
+# CoreDNS authoritative-only configuration for parked & migrating domains
+# Listens on the VM's primary NIC (172.26.3.188) and 127.0.0.1 so Ubuntu's
+# local systemd-resolved stub (127.0.0.53 / 127.0.0.54) stays untouched.
+.:53 {
+    bind 172.26.3.188 127.0.0.1
+    errors
+
+    header {
+        response set aa
+        response clear ra
+    }
+
+    # Refuse reverse ARPA lookups cleanly rather than synthesizing A/MX answers
+    template IN ANY in-addr.arpa ip6.arpa {
+        rcode REFUSED
+    }
+
+    # Authoritative A for apex (@), www, and wildcard subdomains -> 52.66.111.138
+    template IN A . {
+        match ^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9-]{2,}\.$
+        answer "{{ .Name }} 300 IN A 52.66.111.138"
+    }
+
+    # Authoritative MX -> 0 mx.nextdp.com
+    template IN MX . {
+        match ^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9-]{2,}\.$
+        answer "{{ .Name }} 3600 IN MX 0 mx.nextdp.com."
+        additional "mx.nextdp.com. 3600 IN A 52.66.111.138"
+    }
+
+    # Authoritative NS -> ns1.nextdp.com & ns2.nextdp.com
+    template IN NS . {
+        match ^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9-]{2,}\.$
+        answer "{{ .Name }} 3600 IN NS ns1.nextdp.com."
+        answer "{{ .Name }} 3600 IN NS ns2.nextdp.com."
+        additional "ns1.nextdp.com. 3600 IN A 52.66.111.138"
+        additional "ns2.nextdp.com. 3600 IN A 52.66.111.138"
+    }
+
+    # Authoritative SOA (email dns-admin@nextdp.com -> dns-admin.nextdp.com.)
+    template IN SOA . {
+        match ^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9-]{2,}\.$
+        answer "{{ .Name }} 3600 IN SOA ns1.nextdp.com. dns-admin.nextdp.com. 2026111801 3600 600 1209600 300"
+    }
+
+    # Valid NOERROR/NODATA + SOA Authority for AAAA, CAA, TXT, HTTPS, SRV, etc.
+    # Prevents NXDOMAIN/SERVFAIL caching issues and lets ACME CAA checks pass.
+    template IN ANY . {
+        match ^([a-zA-Z0-9_-]+\.)+[a-zA-Z0-9-]{2,}\.$
+        rcode NOERROR
+        authority "{{ .Name }} 300 IN SOA ns1.nextdp.com. dns-admin.nextdp.com. 2026111801 3600 600 1209600 300"
+    }
+
+    # Refuse malformed / single-label / root queries
+    template IN ANY . {
+        rcode REFUSED
+    }
+}

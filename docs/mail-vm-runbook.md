@@ -74,7 +74,30 @@ The restore scripts:
 
 ---
 
-## Step 4 — Verification & Lightsail Firewall Hardening
+## Step 4 — Authoritative CoreDNS + Catch-All Maintenance Page (`ns1`/`ns2.nextdp.com`)
+
+Deploys **CoreDNS v1.15.0** (authoritative-only wildcard/template responder on `:53`) + Caddy catch-all HTTP/HTTPS maintenance site (`503 Service Unavailable`, `Retry-After: 3600`) guarded by `nextdp-tls-ask` (`127.0.0.1:9055`):
+
+```powershell
+powershell -NoProfile -File .\scripts\mail-vm\06-setup-dns-and-maintenance.ps1
+```
+
+What this configures:
+- **CoreDNS (`/etc/coredns/Corefile`)**: binds ONLY to the VM's primary NIC (`172.26.3.188`) and `127.0.0.1` so Ubuntu's `systemd-resolved` stub (`127.0.0.53`) keeps working cleanly.
+  - Answers authoritatively (`aa=1`, `ra=0`) for any valid domain pointed to `ns1.nextdp.com` / `ns2.nextdp.com`:
+    - `A` (`@`, `www`, `*`) → `52.66.111.138` (TTL 300)
+    - `MX` → `0 mx.nextdp.com.` (TTL 3600)
+    - `NS` → `ns1.nextdp.com.`, `ns2.nextdp.com.` (TTL 3600, glue additional `52.66.111.138`)
+    - `SOA` → `ns1.nextdp.com. dns-admin.nextdp.com.`
+    - Unsupported query types (`AAAA`, `CAA`, `TXT`, etc.) → `NOERROR` NODATA + `SOA` authority (required so ACME/Let's Encrypt CAA validation passes).
+- **Maintenance HTML (`/opt/nextdp/maintenance/index.html`) + Caddy Catch-All (`https://`)**:
+  - Serves every unmatched domain over HTTPS with automatic on-demand Let's Encrypt certs.
+  - Guarded by `nextdp-tls-ask.service` (`http://127.0.0.1:9055/ask`), which rejects IP literals, `.local`/`.arpa`/internal names, deep label fuzzing, unpointed hosts (`A != 52.66.111.138`), and exceeds-cap bots (`max 8` hosts per base domain, `max 60/hour`).
+  - Returns `HTTP 503` + `Retry-After: 3600` + `X-Robots-Tag: noindex, nofollow` to protect SEO indexing while sites are under maintenance.
+
+---
+
+## Step 5 — Verification & Lightsail Firewall Hardening
 
 Check full VM health:
 
@@ -88,8 +111,9 @@ Once verified live, restrict the AWS Lightsail instance firewall from "All ports
 |---|---|---|
 | TCP | `22` | SSH (optionally restrict to your IP) |
 | TCP | `25` | Inbound SMTP (MX delivery) |
+| UDP + TCP | `53` | CoreDNS authoritative DNS (`ns1`/`ns2.nextdp.com`) |
 | TCP | `80` | HTTP → HTTPS redirect & ACME HTTP-01 |
-| TCP | `443` | HTTPS (Webmail, Admin, Super Admin, Autoconfig) |
+| TCP | `443` | HTTPS (Webmail, Admin, Super Admin, Autoconfig, Maintenance) |
 | TCP | `465` | SMTPS (implicit TLS submission) |
 | TCP | `587` | SMTP Submission (STARTTLS) |
 | TCP | `110` | POP3 (STARTTLS) |

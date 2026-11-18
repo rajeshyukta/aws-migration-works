@@ -24,6 +24,10 @@ If Azure recovers or once core services are stabilized, either we can re-adopt t
   - `admin.mail.nextdp.com`, `admin.mail.rajesh1.com` → Admin SPA + `/api/{sse,auth,v1/totp,v1/auth,admin,domains,users}/*`
   - `super-admin.mail.nextdp.com`, `super-admin.mail.rajesh1.com` → Super Admin SPA + `/api/{auth,v1/totp,v1/auth,super-admin,organizations,health}/*`
   - `autoconfig.nextdp.com` → Mail client autoconfig XML
+  - `https://` catch-all + `nextdp-tls-ask.service` (`127.0.0.1:9055`) → On-demand Let's Encrypt TLS + `/opt/nextdp/maintenance/index.html` (`HTTP 503`, `Retry-After: 3600`) for all parked/migrating domains (`*`)
+- **Authoritative DNS (`coredns.service`, CoreDNS v1.15.0)**:
+  - Binds `172.26.3.188:53` + `127.0.0.1:53` (`systemd-resolved` stays untouched on `127.0.0.53:53`)
+  - Stateless `template` responder for domains pointed to `ns1.nextdp.com` / `ns2.nextdp.com`: `@`/`www`/`*` `A -> 52.66.111.138`, `MX -> 0 mx.nextdp.com`, `NS -> ns1/ns2.nextdp.com`, `SOA -> ns1.nextdp.com. dns-admin.nextdp.com.`, `NOERROR` NODATA on `AAAA`/`CAA`/`TXT`
 - **NextDP Mail Binary (`/opt/nextdp/bin/nextdp`)**:
   - `nextdp.service`: HTTP API (`127.0.0.1:8080`) + SMTP (`:25`, `:465`, `:587`) + IMAP (`:143`, `:993`) + POP3 (`:110`, `:995`)
   - `nextdp-worker.service`: Queue worker (`--queues=default,emails,notifications --workers=4`)

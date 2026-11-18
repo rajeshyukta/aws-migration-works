@@ -1,5 +1,12 @@
-# NextDP Mail — Standalone AWS Lightsail Caddyfile
-# Serves Webmail, Admin, Super Admin, and Autoconfig for nextdp.com + rajesh1.com
+# NextDP Mail + Authoritative Catch-All Maintenance — Standalone AWS Lightsail Caddyfile
+# Serves Webmail, Admin, Super Admin, and Autoconfig for nextdp.com + rajesh1.com,
+# plus an on-demand HTTPS catch-all maintenance page for all parked/migrating domains.
+
+{
+    on_demand_tls {
+        ask http://127.0.0.1:9055/ask
+    }
+}
 
 # ─────────────────────────────────────────────
 # Webmail — mail.rajesh1.com + mail.nextdp.com
@@ -156,6 +163,33 @@ autoconfig.nextdp.com {
 
     log {
         output file /var/log/caddy/nextdp-autoconfig-access.log
+        format json
+    }
+}
+
+# ─────────────────────────────────────────────
+# Catch-All Maintenance Page (all parked/migrating domains -> *)
+# Uses on_demand TLS guarded by http://127.0.0.1:9055/ask
+# ─────────────────────────────────────────────
+https:// {
+    tls {
+        on_demand
+    }
+
+    root * /opt/nextdp/maintenance
+    rewrite * /index.html
+    header {
+        Content-Type "text/html; charset=utf-8"
+        Cache-Control "no-store, no-cache, must-revalidate"
+        Retry-After "3600"
+        X-Robots-Tag "noindex, nofollow"
+    }
+    file_server {
+        status 503
+    }
+
+    log {
+        output file /var/log/caddy/nextdp-maintenance-access.log
         format json
     }
 }
