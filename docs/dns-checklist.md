@@ -16,6 +16,8 @@ Verified against `1.1.1.1` on 2026-11-18. Both `nextdp.com` and `rajesh1.com` ar
 | `super-admin.mail.rajesh1.com` | A | `52.66.111.138` | Live |
 | `mx.rajesh1.com` | A | `52.66.111.138` | Live (`rajesh1.com MX -> 0 mx.rajesh1.com`) |
 | `autoconfig.rajesh1.com` | A | `52.66.111.138` | Optional — currently absent; omitted from initial `Caddyfile.mail-vm` so ACME does not fail |
+| `dithim.com` | A | `52.66.111.138` | Live (`dithim-web.service` + `/opt/dithim/public`) |
+| `www.dithim.com` | A | `52.66.111.138` | Live (`301` redirect → `https://dithim.com{uri}`) |
 
 ## Nameserver Cutover (`ns1.nextdp.com` & `ns2.nextdp.com` → `52.66.111.138`)
 

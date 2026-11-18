@@ -138,6 +138,8 @@ def source_kind(path: str) -> str:
     name = os.path.basename(path).lower()
     if name.startswith(("domains-access", "nextdp-maintenance-access")):
         return "parked"
+    if name.startswith("dithim-access"):
+        return "site"
     return "mail"
 
 
@@ -220,7 +222,7 @@ def build_daily_archive(target_date: str, write_files: bool = True, print_report
 
                     if write_files:
                         norm_line = raw_line if raw_line.endswith("\n") else raw_line + "\n"
-                        if skind == "parked":
+                        if skind in ("parked", "site"):
                             domains_out.write(norm_line)
                         else:
                             mail_out.write(norm_line)

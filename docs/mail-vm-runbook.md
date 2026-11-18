@@ -119,7 +119,21 @@ sudo nextdp-traffic --date 2026-11-18 # specific IST date
 
 ---
 
-## Step 6 — Verification & Lightsail Firewall Hardening
+## Step 6 — Deploy `dithim.com` Static Site & `.txt` Form Backend
+
+Deploys the Vite static build from `D:\WorkSpace\Dithim\static-website\dist` (excluding `api/*.php`) plus `dithim-web.service` (Python `3.12` stdlib HTTP backend on `127.0.0.1:8090`):
+
+```powershell
+powershell -NoProfile -File .\scripts\mail-vm\08-deploy-dithim.ps1
+```
+
+What this configures:
+- **Static clean URLs**: `/opt/dithim/public` served by Caddy (`www.dithim.com` → `301 https://dithim.com{uri}`, `*.html` → extensionless `301`, `try_files {path} {path}.html {path}/index.html =404`, custom `/404.html`).
+- **Form submissions → `.txt`**: `POST /api/submit` (`enterprise_modal`, `contact_page`) and `POST /api/register` are stored atomically in `/var/lib/dithim/submissions/contact-submissions.txt`, `/var/lib/dithim/submissions/registrations.txt`, and `/var/lib/dithim/submissions/daily/<YYYY-MM-DD>.txt` (`www-data:ubuntu` `0640`, directly readable by `ubuntu`).
+
+---
+
+## Step 7 — Verification & Lightsail Firewall Hardening
 
 Check full VM health:
 

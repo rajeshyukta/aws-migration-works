@@ -179,6 +179,54 @@ autoconfig.nextdp.com {
 }
 
 # ─────────────────────────────────────────────
+# Dithim Website — www.dithim.com redirect + dithim.com static/forms
+# ─────────────────────────────────────────────
+www.dithim.com {
+    redir https://dithim.com{uri} permanent
+    import access_log /var/log/caddy/live/dithim-access.log
+}
+
+dithim.com {
+    root * /opt/dithim/public
+    encode gzip zstd
+
+    @blocked path *.db *.sqlite *.sqlite3 *.sql *.php /data/* /.git/* /.env*
+    respond @blocked 403
+
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8090
+    }
+
+    handle {
+        @indexHtml path /index.html
+        redir @indexHtml / permanent
+
+        @extHtml {
+            path_regexp exthtml ^(.+)\.html$
+            not path /404.html
+        }
+        redir @extHtml {re.exthtml.1} permanent
+
+        try_files {path} {path}.html {path}/index.html =404
+        file_server
+    }
+
+    handle_errors {
+        rewrite * /404.html
+        file_server
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+
+    import access_log /var/log/caddy/live/dithim-access.log
+}
+
+# ─────────────────────────────────────────────
 # Catch-All Maintenance Page (all parked/migrating domains -> *)
 # Uses on_demand TLS guarded by http://127.0.0.1:9055/ask
 # ─────────────────────────────────────────────
