@@ -1,0 +1,161 @@
+# NextDP Mail — Standalone AWS Lightsail Caddyfile
+# Serves Webmail, Admin, Super Admin, and Autoconfig for nextdp.com + rajesh1.com
+
+# ─────────────────────────────────────────────
+# Webmail — mail.rajesh1.com + mail.nextdp.com
+# ─────────────────────────────────────────────
+mail.rajesh1.com, mail.nextdp.com {
+    handle /api/sse/* {
+        reverse_proxy localhost:8080 {
+            flush_interval -1
+        }
+    }
+    handle /api/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/totp/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/webmail/* {
+        reverse_proxy localhost:8080
+    }
+
+    handle /api/health/* {
+        reverse_proxy localhost:8080
+    }
+    handle /health {
+        reverse_proxy localhost:8080
+    }
+    handle /metrics {
+        reverse_proxy localhost:8080
+    }
+
+    handle /api/* {
+        respond 404
+    }
+
+    handle {
+        root * /opt/nextdp/web/webmail
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/nextdp-access.log
+        format json
+    }
+}
+
+# ─────────────────────────────────────────────
+# Admin Console — admin.mail.rajesh1.com + admin.mail.nextdp.com
+# ─────────────────────────────────────────────
+admin.mail.rajesh1.com, admin.mail.nextdp.com {
+    handle /api/sse/* {
+        reverse_proxy localhost:8080 {
+            flush_interval -1
+        }
+    }
+    handle /api/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/totp/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/admin/* {
+        reverse_proxy localhost:8080
+    }
+    @domains path /api/domains /api/domains/*
+    handle @domains {
+        reverse_proxy localhost:8080
+    }
+    @users path /api/users /api/users/*
+    handle @users {
+        reverse_proxy localhost:8080
+    }
+
+    handle /api/* {
+        respond 404
+    }
+
+    handle {
+        root * /opt/nextdp/web/admin
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/nextdp-admin-access.log
+        format json
+    }
+}
+
+# ─────────────────────────────────────────────
+# Super Admin Console — super-admin.mail.rajesh1.com + super-admin.mail.nextdp.com
+# ─────────────────────────────────────────────
+super-admin.mail.rajesh1.com, super-admin.mail.nextdp.com {
+    handle /api/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/totp/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/v1/auth/* {
+        reverse_proxy localhost:8080
+    }
+    handle /api/super-admin/* {
+        reverse_proxy localhost:8080
+    }
+    @organizations path /api/organizations /api/organizations/*
+    handle @organizations {
+        reverse_proxy localhost:8080
+    }
+
+    handle /api/health/* {
+        reverse_proxy localhost:8080
+    }
+    handle /health {
+        reverse_proxy localhost:8080
+    }
+
+    handle /api/* {
+        respond 404
+    }
+
+    handle {
+        root * /opt/nextdp/web/super-admin
+        try_files {path} /index.html
+        file_server
+    }
+
+    log {
+        output file /var/log/caddy/nextdp-superadmin-access.log
+        format json
+    }
+}
+
+# ─────────────────────────────────────────────
+# Mail client autoconfig — autoconfig.nextdp.com
+# (Add autoconfig.rajesh1.com once its A record is created)
+# ─────────────────────────────────────────────
+autoconfig.nextdp.com {
+    handle /mail/config-v1.1.xml {
+        reverse_proxy localhost:8080
+    }
+    handle /.well-known/autoconfig/* {
+        reverse_proxy localhost:8080
+    }
+    handle {
+        respond 404
+    }
+
+    log {
+        output file /var/log/caddy/nextdp-autoconfig-access.log
+        format json
+    }
+}

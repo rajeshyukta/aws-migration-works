@@ -1,0 +1,21 @@
+# Secrets, keys, and local inventories (never commit)
+private-data/
+*.pem
+*.key
+*.crt
+*.p12
+.env
+.env.*
+!.env.example
+r2.env
+
+# Scratch, build artifacts, logs, and dumps
+temp/
+extra-works/
+build/
+*-out.txt
+*.log
+*.dump
+*.sql
+*.tar.gz
+*.zip
