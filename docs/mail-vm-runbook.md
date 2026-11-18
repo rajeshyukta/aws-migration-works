@@ -92,7 +92,7 @@ What this configures:
     - Unsupported query types (`AAAA`, `CAA`, `TXT`, etc.) → `NOERROR` NODATA + `SOA` authority (required so ACME/Let's Encrypt CAA validation passes).
 - **Maintenance HTML (`/opt/nextdp/maintenance/index.html`) + Caddy Catch-All (`https://`)**:
   - Serves every unmatched domain over HTTPS with automatic on-demand Let's Encrypt certs.
-  - Guarded by `nextdp-tls-ask.service` (`http://127.0.0.1:9055/ask`), which rejects IP literals, `.local`/`.arpa`/internal names, deep label fuzzing, unpointed hosts (`A != 52.66.111.138`), and exceeds-cap bots (`max 8` hosts per base domain, `max 60/hour`).
+  - Guarded by `nextdp-tls-ask.service` (`http://127.0.0.1:9055/ask`), which rejects IP literals, `.local`/`.arpa`/internal names, deep label fuzzing, unpointed hosts (`A != 52.66.111.138`), and exceeds-cap bots (`max 10` hosts per base domain, `max 500/hour`).
   - Returns `HTTP 503` + `Retry-After: 3600` + `X-Robots-Tag: noindex, nofollow` to protect SEO indexing while sites are under maintenance.
 
 ---
