@@ -169,11 +169,13 @@ echo "=== [5/6] Install Caddyfile & start Caddy (TLS issuance) ==="
 sudo cp "$STAGE/Caddyfile" /etc/caddy/Caddyfile
 sudo chown root:root /etc/caddy/Caddyfile
 sudo chmod 644 /etc/caddy/Caddyfile
-sudo mkdir -p /var/log/caddy
-for lf in $(grep -oE '/var/log/caddy/[A-Za-z0-9._-]+' /etc/caddy/Caddyfile | sort -u); do
+sudo mkdir -p /var/log/caddy/live
+for lf in $(grep -oE '/var/log/caddy/[A-Za-z0-9._/-]+\.log' /etc/caddy/Caddyfile | sort -u); do
+  sudo mkdir -p "$(dirname "$lf")"
   sudo touch "$lf"
 done
-sudo chown -R caddy:caddy /var/log/caddy
+sudo chown caddy:caddy /var/log/caddy
+sudo chown -R caddy:caddy /var/log/caddy/live
 sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl enable --now caddy
 sudo systemctl reload caddy

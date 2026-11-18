@@ -25,6 +25,9 @@ If Azure recovers or once core services are stabilized, either we can re-adopt t
   - `super-admin.mail.nextdp.com`, `super-admin.mail.rajesh1.com` → Super Admin SPA + `/api/{auth,v1/totp,v1/auth,super-admin,organizations,health}/*`
   - `autoconfig.nextdp.com` → Mail client autoconfig XML
   - `https://` catch-all + `nextdp-tls-ask.service` (`127.0.0.1:9055`) → On-demand Let's Encrypt TLS + `/opt/nextdp/maintenance/index.html` (`HTTP 503`, `Retry-After: 3600`) for all parked/migrating domains (`*`)
+- **Traffic Access Logging (`nextdp-traffic-archive.timer`)**:
+  - Caddy writes trimmed ISO8601 JSON logs into `/var/log/caddy/live/{domains,webmail,admin,superadmin,autoconfig}-access.log` (`50 MiB` roll, `72h` window, drops `resp_headers`, `request>tls`, `Sec-Ch-Ua*`).
+  - Nightly `00:05 Asia/Kolkata` systemd timer splits & compresses dated logs into `/var/log/caddy/daily/<YYYY-MM-DD>/` (`all-domains-<DATE>.jsonl.gz`, `mail-services-<DATE>.jsonl.gz`, `by-domain/<domain>-<DATE>.jsonl.gz`, `summary-<DATE>.{csv,json}`) with `30`-day retention. Live CLI: `nextdp-traffic`.
 - **Authoritative DNS (`coredns.service`, CoreDNS v1.15.0)**:
   - Binds `172.26.3.188:53` + `127.0.0.1:53` (`systemd-resolved` stays untouched on `127.0.0.53:53`)
   - Stateless `template` responder for domains pointed to `ns1.nextdp.com` / `ns2.nextdp.com`: `@`/`www`/`*` `A -> 52.66.111.138`, `MX -> 0 mx.nextdp.com`, `NS -> ns1/ns2.nextdp.com`, `SOA -> ns1.nextdp.com. dns-admin.nextdp.com.`, `NOERROR` NODATA on `AAAA`/`CAA`/`TXT`

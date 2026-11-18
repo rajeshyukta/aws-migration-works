@@ -8,6 +8,29 @@
     }
 }
 
+(access_log) {
+    log {
+        output file {args[0]} {
+            roll_size 50MiB
+            roll_keep 20
+            roll_keep_for 72h
+        }
+        format filter {
+            resp_headers delete
+            request>tls delete
+            request>headers>Sec-Ch-Ua delete
+            request>headers>Sec-Ch-Ua-Mobile delete
+            request>headers>Sec-Ch-Ua-Platform delete
+            request>headers>Accept-Encoding delete
+            request>headers>Connection delete
+            request>headers>Upgrade-Insecure-Requests delete
+            wrap json {
+                time_format iso8601
+            }
+        }
+    }
+}
+
 # ─────────────────────────────────────────────
 # Webmail — mail.rajesh1.com + mail.nextdp.com
 # ─────────────────────────────────────────────
@@ -50,10 +73,7 @@ mail.rajesh1.com, mail.nextdp.com {
         file_server
     }
 
-    log {
-        output file /var/log/caddy/nextdp-access.log
-        format json
-    }
+    import access_log /var/log/caddy/live/webmail-access.log
 }
 
 # ─────────────────────────────────────────────
@@ -96,10 +116,7 @@ admin.mail.rajesh1.com, admin.mail.nextdp.com {
         file_server
     }
 
-    log {
-        output file /var/log/caddy/nextdp-admin-access.log
-        format json
-    }
+    import access_log /var/log/caddy/live/admin-access.log
 }
 
 # ─────────────────────────────────────────────
@@ -140,10 +157,7 @@ super-admin.mail.rajesh1.com, super-admin.mail.nextdp.com {
         file_server
     }
 
-    log {
-        output file /var/log/caddy/nextdp-superadmin-access.log
-        format json
-    }
+    import access_log /var/log/caddy/live/superadmin-access.log
 }
 
 # ─────────────────────────────────────────────
@@ -161,10 +175,7 @@ autoconfig.nextdp.com {
         respond 404
     }
 
-    log {
-        output file /var/log/caddy/nextdp-autoconfig-access.log
-        format json
-    }
+    import access_log /var/log/caddy/live/autoconfig-access.log
 }
 
 # ─────────────────────────────────────────────
@@ -188,8 +199,5 @@ https:// {
         status 503
     }
 
-    log {
-        output file /var/log/caddy/nextdp-maintenance-access.log
-        format json
-    }
+    import access_log /var/log/caddy/live/domains-access.log
 }

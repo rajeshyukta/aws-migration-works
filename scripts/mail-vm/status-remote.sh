@@ -3,10 +3,10 @@
 set -uo pipefail
 
 echo "=== Services ==="
-for svc in postgresql redis-server caddy nextdp nextdp-worker nextdp-scheduler nextdp-certwatch.path nextdp-diskcheck.timer coredns nextdp-tls-ask; do
+for svc in postgresql redis-server caddy nextdp nextdp-worker nextdp-scheduler nextdp-certwatch.path nextdp-diskcheck.timer nextdp-traffic-archive.timer coredns nextdp-tls-ask; do
   st="$(systemctl is-active "$svc" 2>/dev/null || true)"
   [ -z "$st" ] && st="unknown"
-  printf "  %-24s %s\n" "$svc" "$st"
+  printf "  %-28s %s\n" "$svc" "$st"
 done
 
 echo ""

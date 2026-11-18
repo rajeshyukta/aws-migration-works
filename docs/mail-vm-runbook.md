@@ -97,7 +97,29 @@ What this configures:
 
 ---
 
-## Step 5 — Verification & Lightsail Firewall Hardening
+## Step 5 — Daily Access Logs & Traffic Analytics
+
+Deploys trimmed JSON access logging (`50 MiB` roll, `72h` live buffer, stripping noisy response/TLS/client-hint headers) plus a nightly `00:05 IST` archiver & domain traffic analyzer:
+
+```powershell
+powershell -NoProfile -File .\scripts\mail-vm\07-setup-access-logs.ps1
+```
+
+Outputs on the VM under `/var/log/caddy/daily/<YYYY-MM-DD>/` (`30`-day retention):
+- `all-domains-<YYYY-MM-DD>.jsonl.gz` — unified parked-domain traffic
+- `mail-services-<YYYY-MM-DD>.jsonl.gz` — Webmail, Admin, Super Admin, Autoconfig traffic
+- `by-domain/<domain>-<YYYY-MM-DD>.jsonl.gz` — separate dated file per domain
+- `summary-<YYYY-MM-DD>.csv` & `summary-<YYYY-MM-DD>.json` — per-domain `human_likely_hits`, `search_bot_hits`, `scanner_hits`, `unique_ips`, top paths & referers
+
+Run a live traffic report anytime via SSH:
+```bash
+sudo nextdp-traffic                   # today's IST traffic table
+sudo nextdp-traffic --date 2026-11-18 # specific IST date
+```
+
+---
+
+## Step 6 — Verification & Lightsail Firewall Hardening
 
 Check full VM health:
 
