@@ -40,22 +40,37 @@ This reports:
 
 ## Step 3 — Restore Database & Start Services
 
-Once a snapshot ID (from `restic`) or dump file is identified:
+### Option A — Restore from Cloudflare R2 (`restic` / raw S3 dump)
+
+Once a `RESTIC_PASSWORD` and snapshot ID (or raw object key) are available:
 
 ```powershell
 # Example using a restic snapshot from prefix prod-main:
 powershell -NoProfile -File .\scripts\mail-vm\04-restore-r2-db.ps1 -RepoPrefix prod-main -SnapshotId <SNAPSHOT_ID>
 ```
 
-The restore script:
-1. Extracts the `.dump` file from restic into `/tmp/r2-restore/` (and cleans up temp files via `trap`).
-2. Stops `nextdp*` units, recreates `nextdp_mail` owned by `nextdp_mail` using the password from `/opt/nextdp/config/.env`.
-3. Runs `pg_restore --no-owner --role=nextdp_mail`.
-4. Runs `cd /opt/nextdp/config && /opt/nextdp/bin/nextdp migrate`.
-5. Prints table row counts (`raw_emails`, `messages`, `users`, `organizations`, `domains`, `mailboxes`, `attachments`).
-6. Enables and starts `nextdp`, `nextdp-worker`, and `nextdp-scheduler`.
+### Option B — Restore from Local Backup Archive (Used on `2026-11-18`)
 
-*(Fallback if R2 snapshots cannot be decrypted yet: pass `-StartServices` to `02-build-and-deploy.ps1` and run `nextdp migrate` + `nextdp db:seed` to start with a fresh DB while waiting on Azure support.)*
+Because the R2 `nxtmngr-test/prod-main` repository's auto-generated `RESTIC_PASSWORD` lives sealed in stopped Azure `nmc-main` (`backup_targets.repo_password_enc`), NextDP Mail was restored from the verified pre-Azure local backup (`aws-final-20260826`):
+
+```powershell
+powershell -NoProfile -File .\scripts\mail-vm\05-restore-local-backup.ps1 `
+  -BackupDir "D:\WorkSpace\PROJECTS\NextDP_Mail\private-data\backups\aws-final-20260826"
+```
+
+The restore scripts:
+1. Extract the `.dump` (R2) or upload the staged `.dump`/`.sql` + `opt-nextdp.tar.gz` (`05-restore-local-backup.ps1`).
+2. Stop `nextdp*` units, copy the dump to a `0600` `postgres`-owned temp file, recreate `nextdp_mail` owned by `nextdp_mail` using `/opt/nextdp/config/.env`, and run `pg_restore --no-owner --no-acl --role=nextdp_mail`.
+3. Optionally restore `/opt/nextdp/storage/{attachments,bimi,emails,uploads}` and sync `MIGRATION_ENCRYPTION_KEY` from `dot-env-config` (without printing secrets).
+4. Run `cd /opt/nextdp/config && /opt/nextdp/bin/nextdp migrate` and print row counts (`organizations`, `domains`, `users`, `mailboxes`, `messages`, `raw_emails`, `attachments`).
+5. Enable and start `nextdp`, `nextdp-worker`, and `nextdp-scheduler`.
+
+### Outbound Transport & Login Notes (Restored `2026-08-26` State)
+
+- Global `system_settings` and organizations `default` (`rajesh@nextdp.com`, including `nextdp.com`) and `rajesh-one` (`rajesh@navasanatani.com`) use **ZeptoMail API** (`region=in`, `api.zeptomail.in`), verified reachable over HTTPS from `52.66.111.138`.
+- Organization `idn-mail` (`rajesh@digpre.com`: `digpre.com`, IDN domains) still has legacy SMTP relay `mailout.nextdp.com:587` configured in its org settings; update it to ZeptoMail in the Admin Console if you want outbound delivery via ZeptoMail for those domains too.
+- Restored `super_admins` login: `admin@rajesh1.com` (`https://super-admin.mail.nextdp.com/` or `https://super-admin.mail.rajesh1.com/`).
+- Leaving `nxtmngr-test/prod-main` untouched in R2 allows a one-command upgrade to the `2026-11-18` snapshot via `04-restore-r2-db.ps1` once Azure `nmc-main` (`RESTIC_PASSWORD`) is recovered.
 
 ---
 

@@ -1,6 +1,8 @@
 # Inspect Cloudflare R2 bucket contents (and restic snapshots if RESTIC_PASSWORD is set).
 param(
-    [string]$R2EnvPath = ""
+    [string]$R2EnvPath = "",
+    [string]$Bucket = "",
+    [string]$Endpoint = ""
 )
 
 Set-StrictMode -Version Latest
@@ -22,10 +24,13 @@ $remoteEnv = "/tmp/.r2.env"
 
 Copy-ToVm -Vm $vm -LocalPath $R2EnvPath -RemotePath $remoteEnv
 Invoke-VmCommand -Vm $vm -Command "chmod 600 $remoteEnv"
+$overrides = @("R2_ENV_FILE=$remoteEnv")
+if ($Bucket) { $overrides += "R2_BUCKET_OVERRIDE=$Bucket" }
+if ($Endpoint) { $overrides += "R2_ENDPOINT_OVERRIDE=$Endpoint" }
 try {
     Invoke-VmScript -Vm $vm `
         -LocalScriptPath (Join-Path $PSScriptRoot "03-check-r2-remote.sh") `
-        -EnvPrefix "R2_ENV_FILE=$remoteEnv"
+        -EnvPrefix ($overrides -join " ")
 } finally {
     & ssh -i $vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes $vm.Target "rm -f $remoteEnv" 2>$null
 }

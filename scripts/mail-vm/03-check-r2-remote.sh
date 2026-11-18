@@ -18,12 +18,15 @@ set -a
 source <(tr -d '\r' < "$ENV_FILE")
 set +a
 
+[ -n "${R2_BUCKET_OVERRIDE:-}" ] && R2_BUCKET="$R2_BUCKET_OVERRIDE"
+[ -n "${R2_ENDPOINT_OVERRIDE:-}" ] && R2_ENDPOINT="$R2_ENDPOINT_OVERRIDE"
+
 if [ -z "${R2_ENDPOINT:-}" ] && [ -n "${R2_ACCOUNT_ID:-}" ]; then
   R2_ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 fi
 R2_BUCKET="${R2_BUCKET:-nxtmngr-test}"
 # Normalize pasted Cloudflare S3 URLs like https://<id>.r2.cloudflarestorage.com/<bucket>
-R2_ENDPOINT="$(python3 -c 'import os; from urllib.parse import urlparse; u=urlparse(os.environ.get("R2_ENDPOINT","").strip()); print((u.scheme+"://"+u.netloc) if u.scheme and u.netloc else os.environ.get("R2_ENDPOINT","").strip().rstrip("/"))')"
+R2_ENDPOINT="$(python3 -c 'import sys; from urllib.parse import urlparse; raw=sys.argv[1].strip(); u=urlparse(raw); print((u.scheme+"://"+u.netloc) if u.scheme and u.netloc else raw.rstrip("/"))' "${R2_ENDPOINT:-}")"
 
 if [ -z "${R2_ENDPOINT:-}" ] || [ -z "${R2_ACCESS_KEY_ID:-}" ] || [ -z "${R2_SECRET_ACCESS_KEY:-}" ]; then
   echo "FATAL: R2_ENDPOINT/R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY are required." >&2

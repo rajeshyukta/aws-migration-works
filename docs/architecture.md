@@ -32,5 +32,6 @@ If Azure recovers or once core services are stabilized, either we can re-adopt t
   - `nextdp-diskcheck.timer` + `harden-logging`: journald capped at `500M`, rsyslog deduplication dropped for `nextdp*`, hourly disk space alert at `85%`
 - **Outbound Email Transport**:
   - **ZeptoMail** (configured per-org/system in PostgreSQL `nextdp_mail`, or fallback SMTP relay on `:587`). Note: AWS Lightsail blocks outbound TCP `:25` by default; ZeptoMail uses HTTPS API (`api.zeptomail.*`) or port `587` (`smtp.zeptomail.*`), so outbound sending is unaffected.
-- **Recovery Tools**:
+- **Recovery & Live State**:
   - `restic 0.19.1` (`/usr/local/bin/restic`, SHA256-verified) + `python3-boto3` for inspecting and restoring the `nextdp_mail` PostgreSQL backup from Cloudflare R2 (`nxtmngr-test`).
+  - `nxtmngr-test/prod-main` (`2026-11-18` snapshots) is preserved intact on R2 pending recovery of `RESTIC_PASSWORD` from stopped Azure `nmc-main` (`40.80.95.1`, local `nextmanager_core` PostgreSQL `backup_targets.repo_password_enc`). Meanwhile, the VM is live on the restored `2026-08-26` backup (`3` orgs, `24` domains, `28` users/mailboxes, `1,360` messages, `3,598` raw emails, `136` attachments, `92 MiB` `/opt/nextdp/storage`, `SMTP_DOMAIN=mx.nextdp.com`).

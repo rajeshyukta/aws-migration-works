@@ -20,7 +20,9 @@ echo ""
 
 echo "=== HTTPS Endpoints (local resolve) ==="
 for h in mail.nextdp.com admin.mail.nextdp.com super-admin.mail.nextdp.com autoconfig.nextdp.com mail.rajesh1.com admin.mail.rajesh1.com super-admin.mail.rajesh1.com; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 --resolve "$h:443:127.0.0.1" "https://$h/" 2>/dev/null || echo "ERR")
+  path="/"
+  [ "$h" = "autoconfig.nextdp.com" ] && path="/mail/config-v1.1.xml?emailaddress=rajesh@nextdp.com"
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 --resolve "$h:443:127.0.0.1" "https://$h${path}" 2>/dev/null || echo "ERR")
   printf "  %-32s -> HTTP %s\n" "$h" "$code"
 done
 
