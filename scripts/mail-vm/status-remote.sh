@@ -4,7 +4,9 @@ set -uo pipefail
 
 echo "=== Services ==="
 for svc in postgresql redis-server caddy nextdp nextdp-worker nextdp-scheduler nextdp-certwatch.path nextdp-diskcheck.timer; do
-  printf "  %-24s %s\n" "$svc" "$(systemctl is-active "$svc" 2>/dev/null || echo inactive)"
+  st="$(systemctl is-active "$svc" 2>/dev/null || true)"
+  [ -z "$st" ] && st="unknown"
+  printf "  %-24s %s\n" "$svc" "$st"
 done
 
 echo ""
