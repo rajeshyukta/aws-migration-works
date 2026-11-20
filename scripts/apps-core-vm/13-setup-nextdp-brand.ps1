@@ -1,10 +1,33 @@
-# Programmatically onboard the NextDP brand (nextdp.com, admin.nextdp.com, console.nextdp.com)
-# on NextDP Core via BrandProvisioner + idp.Service.Provision, verify child realm
-# ndp-nextdp (accounts.nextdp.com) under nextdp-core, ensure rajesh@nextdp.com brand
-# superadmin + realm_admin, save /root/.nextdp-brand-idp.env, and pull credentials.
+# Programmatically onboard a brand on NextDP Core via BrandProvisioner + idp.Service.Provision:
+# child realm ndp-<slug> (accounts.<primary domain>) under nextdp-core, brand superadmin +
+# realm_admin, brand nameservers, /root/.<slug>-brand-idp.env on the VM (pulled to
+# private-data/<slug>-brand-idp.env). Defaults = the nextdp brand. Restarts nextdp at the end.
+#   .\scripts\apps-core-vm\13-setup-nextdp-brand.ps1 -Slug nextdigital -Name NextDigital -PrimaryDomain nextdigital.in `
+#       -SenderEmail support@nextdigital.in -PrimaryProduct local -Features dns,domains,idp_login,local `
+#       -AdminEmail rajesh@nextdigital.in -Nameservers ns11.nextdp.com,ns12.nextdp.com
 param(
+    [string]$Slug = "nextdp",
+    [string]$Name = "NextDP",
+    [string]$PrimaryDomain = "nextdp.com",
+    [string]$AdminDomain = "",      # default admin.<PrimaryDomain>
+    [string]$ConsoleDomain = "",    # default console.<PrimaryDomain>
+    [string]$SenderName = "",       # default = Name
+    [string]$SenderEmail = "noreply@nextdp.com",
+    [string]$PrimaryProduct = "domains",
+    [string[]]$Features = @("domains", "dns", "blogs", "handcraft", "direct_register"),
+    [string]$AdminEmail = "rajesh@nextdp.com",
+    [string]$AdminName = "Rajesh",
+    [string[]]$Nameservers = @(),
     [switch]$SkipPull
 )
+if (-not $AdminDomain) { $AdminDomain = "admin.$PrimaryDomain" }
+if (-not $ConsoleDomain) { $ConsoleDomain = "console.$PrimaryDomain" }
+if (-not $SenderName) { $SenderName = $Name }
+if ($Slug -notmatch '^[a-z0-9-]+$') { throw "Invalid -Slug" }
+foreach ($v in @($PrimaryDomain, $AdminDomain, $ConsoleDomain) + $Nameservers) { if ($v -notmatch '^[a-z0-9.-]+$') { throw "Invalid host: $v" } }
+foreach ($v in @($SenderEmail, $AdminEmail)) { if ($v -notmatch '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+$') { throw "Invalid email: $v" } }
+foreach ($v in $Features + @($PrimaryProduct)) { if ($v -notmatch '^[a-z_]+$') { throw "Invalid feature/product: $v" } }
+if ($Name -notmatch '^[A-Za-z0-9 ._-]+$' -or $SenderName -notmatch '^[A-Za-z0-9 ._-]+$' -or $AdminName -notmatch '^[A-Za-z0-9 ._-]+$') { throw "Invalid name" }
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -32,6 +55,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/raiworks/rapidgo/v2/core/config"
@@ -81,7 +105,7 @@ func main() {
 			SenderName:      envOr("BRAND_SENDER_NAME", "NextDP"),
 			SenderEmail:     envOr("BRAND_SENDER_EMAIL", "noreply@nextdp.com"),
 			PrimaryProduct:  envOr("BRAND_PRIMARY_PRODUCT", "domains"),
-			EnabledFeatures: []string{"domains", "dns", "blogs", "handcraft", "direct_register"},
+			EnabledFeatures: strings.Split(envOr("BRAND_FEATURES", "domains,dns,blogs,handcraft,direct_register"), ","),
 		})
 		if perr != nil {
 			log.Fatalf("ProvisionBrand: %v", perr)
@@ -181,7 +205,10 @@ try {
 
     Invoke-VmScript -Vm $vm `
         -LocalScriptPath (Join-Path $PSScriptRoot "13-setup-nextdp-brand.sh") `
-        -EnvPrefix "BRAND_BOOT_BIN=$remoteBin"
+        -EnvPrefix ("BRAND_BOOT_BIN=$remoteBin BRAND_SLUG=$Slug BRAND_NAME='$Name' BRAND_PRIMARY_DOMAIN=$PrimaryDomain " +
+            "BRAND_ADMIN_DOMAIN=$AdminDomain BRAND_CONSOLE_DOMAIN=$ConsoleDomain BRAND_SENDER_NAME='$SenderName' " +
+            "BRAND_SENDER_EMAIL=$SenderEmail BRAND_PRIMARY_PRODUCT=$PrimaryProduct BRAND_FEATURES=$($Features -join ',') " +
+            "BRAND_ADMIN_EMAIL=$AdminEmail BRAND_ADMIN_NAME='$AdminName' BRAND_NAMESERVERS=$($Nameservers -join ',')") | Out-Host
 } finally {
     if (Test-Path -LiteralPath $tmpGoDir) { Remove-Item -LiteralPath $tmpGoDir -Recurse -Force }
     if (Test-Path -LiteralPath $localBin) { Remove-Item -LiteralPath $localBin -Force }
@@ -189,8 +216,20 @@ try {
 }
 
 if (-not $SkipPull) {
-    $pullScript = Join-Path $PSScriptRoot "pull-nextdp-idp-credentials.ps1"
-    if (Test-Path -LiteralPath $pullScript) {
-        & $pullScript
+    if ($Slug -eq "nextdp") {
+        $pullScript = Join-Path $PSScriptRoot "pull-nextdp-idp-credentials.ps1"
+        if (Test-Path -LiteralPath $pullScript) { & $pullScript }
+    } else {
+        # /root/.<slug>-brand-idp.env -> private-data/<slug>-brand-idp.env (0600 temp copy on the VM, deleted)
+        $local = Join-Path $repoRoot "private-data\$Slug-brand-idp.env"
+        $tmp = "/tmp/.$Slug-brand-idp-$PID.env"
+        try {
+            Invoke-VmCommand -Vm $vm -Command "sudo install -o $($vm.User) -m 0600 /root/.$Slug-brand-idp.env $tmp"
+            & scp -i $vm.SshKey -o BatchMode=yes "$($vm.Target):$tmp" $local
+            if ($LASTEXITCODE -ne 0) { throw "pull failed" }
+            Write-Host "Pulled brand credentials to $local (not printed)"
+        } finally {
+            & ssh -n -i $vm.SshKey -o BatchMode=yes $vm.Target "rm -f $tmp" 2>$null
+        }
     }
 }

@@ -8,7 +8,8 @@ param(
     [string]$KeyName = "NEXTDP_API_KEY",
     [string]$DnsBaseUrl = "https://dns.cconsole.com",
     [string]$Nameservers = "ns1.nextdp.com ns2.nextdp.com",
-    [switch]$NoWebhook
+    [switch]$NoWebhook,
+    [string]$WebhookSecretName = ""   # e.g. WEBHOOK_SECRET in a dns-<slug>.env from scripts/dns-vm/10-create-tenant
 )
 
 Set-StrictMode -Version Latest
@@ -32,10 +33,24 @@ try {
 } finally {
     if (Test-Path $tmp) { Remove-Item -LiteralPath $tmp -Force }
 }
+$remoteWh = ""
+if ($WebhookSecretName) {
+    $wline = Get-Content $src | Where-Object { $_ -match "^$WebhookSecretName=" } | Select-Object -First 1
+    if (-not $wline) { throw "$WebhookSecretName not found in $KeyFile" }
+    $wtmp = Join-Path (Resolve-RepoRoot) "private-data\.dnswh-$PID.tmp"
+    $remoteWh = "/tmp/.dnswh-$PID"
+    try {
+        [IO.File]::WriteAllText($wtmp, ($wline -replace "^$WebhookSecretName=", "").Trim(), (New-Object Text.UTF8Encoding($false)))
+        Remove-Variable wline
+        Invoke-VmCommand -Vm $vm -Command "umask 077 && : > $remoteWh"
+        Copy-ToVm -Vm $vm -LocalPath $wtmp -RemotePath $remoteWh
+    } finally { if (Test-Path $wtmp) { Remove-Item -LiteralPath $wtmp -Force } }
+    $NoWebhook = $true   # the secret comes from the file, not from the dns-service console API
+}
 $wh = if ($NoWebhook) { "0" } else { "1" }
 try {
     Invoke-VmScript -Vm $vm -LocalScriptPath (Join-Path $PSScriptRoot "16-setup-brand-dns-connection.sh") `
-        -EnvPrefix "BRAND_ID=$BrandId API_KEY_FILE=$remote DNS_BASE_URL=$DnsBaseUrl NAMESERVERS='$Nameservers' WEBHOOK=$wh" | Out-Host
+        -EnvPrefix "BRAND_ID=$BrandId API_KEY_FILE=$remote DNS_BASE_URL=$DnsBaseUrl NAMESERVERS='$Nameservers' WEBHOOK=$wh WEBHOOK_SECRET_FILE=$remoteWh" | Out-Host
 } finally {
-    & ssh -i $vm.SshKey -o BatchMode=yes $vm.Target "rm -f $remote" 2>$null
+    & ssh -n -i $vm.SshKey -o BatchMode=yes $vm.Target "rm -f $remote $remoteWh" 2>$null
 }

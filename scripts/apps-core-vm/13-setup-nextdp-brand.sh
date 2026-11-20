@@ -14,15 +14,18 @@ if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
     BRAND_SENDER_EMAIL="${BRAND_SENDER_EMAIL:-}" \
     BRAND_ADMIN_EMAIL="${BRAND_ADMIN_EMAIL:-}" \
     BRAND_ADMIN_NAME="${BRAND_ADMIN_NAME:-}" \
+    BRAND_FEATURES="${BRAND_FEATURES:-}" \
+    BRAND_NAMESERVERS="${BRAND_NAMESERVERS:-}" \
     IDP_MASTER_HOST="${IDP_MASTER_HOST:-}" \
     bash "$0" "$@"
 fi
+exec 2>&1  # PowerShell 5.1 turns remote stderr (e.g. the DB_SSL_MODE warning) into a terminating error
 
-# Programmatically onboard the NextDP brand in NextDP Core (via BrandProvisioner +
-# idp.Service.Provision), verify child realm ndp-nextdp (accounts.nextdp.com), ensure
-# rajesh@nextdp.com (brand superadmin + child realm_admin), save credentials to
-# 0600 /root/.nextdp-brand-idp.env, restart nextdp units, and probe Caddy/TLS routing.
-# Idempotent; NEVER prints raw secrets.
+# Programmatically onboard a brand in NextDP Core (via BrandProvisioner +
+# idp.Service.Provision): child realm ndp-<slug> (accounts.<primary domain>), brand superadmin +
+# child realm_admin BRAND_ADMIN_EMAIL, optional brand nameservers, credentials in
+# 0600 /root/.<slug>-brand-idp.env, restart nextdp units, probe Caddy/TLS routing.
+# Defaults = the nextdp brand (2026-11-19). Idempotent; NEVER prints raw secrets.
 
 export BRAND_BOOT_BIN="${BRAND_BOOT_BIN:-}"
 export BRAND_NAME="${BRAND_NAME:-NextDP}"
@@ -36,9 +39,12 @@ export BRAND_SENDER_EMAIL="${BRAND_SENDER_EMAIL:-noreply@nextdp.com}"
 export BRAND_ADMIN_EMAIL="${BRAND_ADMIN_EMAIL:-rajesh@nextdp.com}"
 export BRAND_ADMIN_NAME="${BRAND_ADMIN_NAME:-Rajesh}"
 export IDP_MASTER_HOST="${IDP_MASTER_HOST:-nextidp.com}"
+export BRAND_FEATURES="${BRAND_FEATURES:-domains,dns,blogs,handcraft,direct_register}"
+export BRAND_NAMESERVERS="${BRAND_NAMESERVERS:-}"
+[[ "$BRAND_SLUG" =~ ^[a-z0-9-]+$ ]] || { echo "FATAL: invalid BRAND_SLUG" >&2; exit 1; }
 
 CORE_IDP_ENV="/root/.nextdp-core-idp.env"
-BRAND_IDP_ENV="/root/.nextdp-brand-idp.env"
+BRAND_IDP_ENV="/root/.${BRAND_SLUG}-brand-idp.env"
 NEXTDP_ENV="/srv/apps/nextdp/shared/.env"
 
 for f in "$CORE_IDP_ENV" "$NEXTDP_ENV"; do
@@ -100,7 +106,7 @@ ADMIN_EMAIL = os.environ["BRAND_ADMIN_EMAIL"].strip().lower()
 ADMIN_NAME = os.environ["BRAND_ADMIN_NAME"].strip()
 
 CORE_IDP_ENV = "/root/.nextdp-core-idp.env"
-BRAND_IDP_ENV = "/root/.nextdp-brand-idp.env"
+BRAND_IDP_ENV = f"/root/.{BRAND_SLUG}-brand-idp.env"
 NEXTDP_ENV = "/srv/apps/nextdp/shared/.env"
 
 
@@ -307,6 +313,24 @@ if brand_users_count == 0:
     brand_super_action = "created"
 else:
     brand_super_action = "existing"
+    # A previous run created the superadmin but stopped before the credentials file was written:
+    # set a fresh password so it is known (stored only in the 0600 file below).
+    if not brand_super_pw and not brand_env_exists:
+        brand_super_pw = strong_password()
+        cmd_pw = (
+            f"set -a && . {NEXTDP_ENV} && set +a && cd /srv/apps/nextdp/current && "
+            f"./nextdp ops:set-user-password '{ADMIN_EMAIL}'"
+        )
+        subprocess.run(["bash", "-c", cmd_pw], input=f"{brand_super_pw}\n{brand_super_pw}\n",
+                       text=True, check=True, capture_output=True)
+        brand_super_action = "existing_password_set"
+
+# 3b) Brand nameservers (shown to members for managed DNS), one per line
+ns_list = [h.strip().lower() for h in os.environ.get("BRAND_NAMESERVERS", "").replace(",", " ").split() if h.strip()]
+if ns_list:
+    subprocess.run(["sudo", "-u", "postgres", "psql", "-d", "nextdp_core", "-XAtq", "-v", "ON_ERROR_STOP=1",
+                    "-v", f"ns={chr(10).join(ns_list)}", "-v", f"bid={brand_id}",
+                    ], input="UPDATE brands SET nameservers = :'ns', updated_at = now() WHERE id = :'bid';\n", text=True, check=True)
 
 # 4) Verify clients in ndp-nextdp via tenant key
 _, c_list = idp_tenant_req("GET", "/api/v1/realm/clients", target_realm_id=child_realm_id)
@@ -330,6 +354,7 @@ lines = [
     f"NEXTDP_BRAND_CONSOLE_DOMAIN={CONSOLE_DOMAIN}",
     f"NEXTDP_BRAND_PRIMARY_PRODUCT={meta.get('primary_product', PRIMARY_PRODUCT)}",
     f"NEXTDP_BRAND_ENABLED_FEATURES={enabled_feats}",
+    f"NEXTDP_BRAND_NAMESERVERS={','.join(ns_list)}",
     f"NEXTDP_BRAND_SUPERADMIN_EMAIL={ADMIN_EMAIL}",
     f"NEXTDP_BRAND_SUPERADMIN_PASSWORD={brand_super_pw}",
     f"NEXTDP_BRAND_IDP_PARENT_REALM_ID={parent_realm_id}",

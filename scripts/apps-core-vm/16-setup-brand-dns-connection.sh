@@ -9,6 +9,9 @@
 #      NOTE 2026-11-20: dns-service runs with Next iDP console login, so its webhook endpoints accept
 #      only a console session, not the API key (HTTP 403). Use -NoWebhook and set the webhook in the
 #      consoles (docs/azure-r2-restore.md section 4).
+#   3b. (WEBHOOK_SECRET_FILE set) the tenant webhook URL + secret were written on the DNS VM
+#      (scripts/dns-vm/10-create-tenant): seal and store that secret, then POST a webhook.test
+#      signed exactly like dns-service (HMAC-SHA256, X-DNS-Signature) to https://<console>/webhooks/dns.
 # Secrets are read from files and never printed. Env: BRAND_ID, API_KEY_FILE (0600, the key only),
 # DNS_BASE_URL (https://dns.cconsole.com), NAMESERVERS ("ns1.nextdp.com ns2.nextdp.com"), WEBHOOK=1
 set -Eeuo pipefail
@@ -19,13 +22,15 @@ API_KEY_FILE="${API_KEY_FILE:?API_KEY_FILE required}"
 DNS_BASE_URL="${DNS_BASE_URL:-https://dns.cconsole.com}"
 NAMESERVERS="${NAMESERVERS:-ns1.nextdp.com ns2.nextdp.com}"
 WEBHOOK="${WEBHOOK:-1}"
-trap 'rm -f "$API_KEY_FILE"' EXIT
+WEBHOOK_SECRET_FILE="${WEBHOOK_SECRET_FILE:-}"
+trap 'rm -f "$API_KEY_FILE" ${WEBHOOK_SECRET_FILE:+"$WEBHOOK_SECRET_FILE"}' EXIT
 [[ "$BRAND_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo "FATAL: invalid BRAND_ID"; exit 1; }
 [[ "$DNS_BASE_URL" =~ ^https?://[A-Za-z0-9.:-]+$ ]] || { echo "FATAL: invalid DNS_BASE_URL"; exit 1; }
 [ -s "$API_KEY_FILE" ] || { echo "FATAL: API key file missing"; exit 1; }
 python3 -c "import cryptography" 2>/dev/null || { echo "FATAL: python3-cryptography missing (apt install python3-cryptography)"; exit 1; }
 
 sudo env BRAND_ID="$BRAND_ID" API_KEY_FILE="$API_KEY_FILE" DNS_BASE_URL="$DNS_BASE_URL" NAMESERVERS="$NAMESERVERS" WEBHOOK="$WEBHOOK" \
+  WEBHOOK_SECRET_FILE="$WEBHOOK_SECRET_FILE" \
   python3 - <<'PY'
 import base64, json, os, subprocess, sys, urllib.error, urllib.request, uuid
 from cryptography.hazmat.primitives import hashes
@@ -127,5 +132,28 @@ if os.environ.get("WEBHOOK") == "1":
     print(f"  webhook {receiver}: test HTTP {st}, receiver status {d.get('status_code')}, delivered={d.get('ok')} {d.get('error') or ''}")
     if not d.get("ok"):
         sys.exit("FATAL: webhook test ping was not accepted by NextDP Core")
+if os.environ.get("WEBHOOK_SECRET_FILE"):
+    import hashlib, hmac, time as _t
+    wsecret = open(os.environ["WEBHOOK_SECRET_FILE"]).read().strip()
+    if not wsecret.startswith("whsec_"):
+        sys.exit("FATAL: webhook secret file does not hold a whsec_ secret")
+    psql("UPDATE brand_service_connections SET webhook_secret_enc = :'s', updated_at = now() WHERE brand_id = :'b' AND kind = 'dns';",
+         s=seal(wsecret), b=brand_id)
+    body = json.dumps({"event": "webhook.test", "fqdn": "", "status": "", "tenant": w.get("account", ""),
+                       "occurred_at": _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime())}, separators=(",", ":")).encode()
+    sig = "sha256=" + hmac.new(wsecret.encode(), body, hashlib.sha256).hexdigest()
+    del wsecret
+    receiver = f"https://{console}/webhooks/dns"
+    req = urllib.request.Request(receiver, data=body, method="POST", headers={
+        "Content-Type": "application/json", "X-DNS-Event": "webhook.test", "X-DNS-Signature": sig,
+        "X-DNS-Timestamp": str(int(_t.time()))})
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            code = r.status
+    except urllib.error.HTTPError as e:
+        code = e.code
+    print(f"  webhook secret stored; signed test ping to {receiver}: HTTP {code}")
+    if not 200 <= code < 300:
+        sys.exit("FATAL: NextDP Core did not accept the signed test ping")
 print("DNS_CONNECTION_OK")
 PY
