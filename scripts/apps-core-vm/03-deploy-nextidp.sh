@@ -89,6 +89,16 @@ sudo systemctl daemon-reload
 sudo systemctl enable nextidp nextidp-worker >/dev/null 2>&1 || true
 sudo systemctl enable --now nextidp-mail-prune.timer nextidp-contact-prune.timer nextidp-audit-prune.timer >/dev/null 2>&1 || true
 
+echo "==> Back up the nextidp database (before migrate & seed)"
+BK_ROOT=/var/backups/nextidp
+BK="$BK_ROOT/pre-deploy-${VERSION}-${TS}"
+sudo mkdir -p "$BK"
+sudo -u postgres pg_dump -Fc -d nextidp | sudo tee "$BK/nextidp.dump" >/dev/null
+sudo chmod 700 "$BK"
+sudo chmod 600 "$BK/nextidp.dump"
+echo "backup: $BK ($(sudo du -h "$BK/nextidp.dump" | cut -f1))"
+ls -1dt "$BK_ROOT"/pre-deploy-* 2>/dev/null | tail -n +6 | xargs -r sudo rm -rf
+
 echo "==> Stop, switch symlink, migrate & seed"
 sudo systemctl stop nextidp-worker nextidp 2>/dev/null || true
 sudo ln -sfn "$REL" "$APP_DIR/current"

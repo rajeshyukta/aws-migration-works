@@ -87,7 +87,7 @@ All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), C
 
 | App | Units | Port | Hostnames | Dir |
 |---|---|---|---|---|
-| **Next iDP** | `nextidp`, `nextidp-worker`; timers `nextidp-mail-prune`, `nextidp-contact-prune`, `nextidp-audit-prune` | `:8080` | `nextidp.com`, `www.nextidp.com`, `admin.nextidp.com`, and **any `accounts.<brand>`** (e.g. `accounts.nextdp.com`) via the on-demand TLS catch-all | `/opt/nextidp` |
+| **Next iDP** | `nextidp`, `nextidp-worker`; timers `nextidp-mail-prune`, `nextidp-contact-prune`, `nextidp-audit-prune` | `:8080` | `nextidp.com`, `www.nextidp.com`, `admin.nextidp.com`, and **any `accounts.<brand>`** (e.g. `accounts.nextdp.com`) via the on-demand TLS catch-all | `/opt/nextidp` (**v0.89.1** since 2026-11-20, release `0.89.1-20261120-171818`; was 0.86.0. Deploy: `scripts/apps-core-vm/03-deploy-nextidp -Rebuild`, which dumps the `nextidp` DB to `/var/backups/nextidp/pre-deploy-<ver>-<ts>/` first, keeps 5) |
 | **NextDP Core** | `nextdp`, `nextdp-worker`, `nextdp-scheduler` | `:8090` | `core.nextdp.com` + every active brand's `admin_domain` / `console_domain` (today `admin/console.nextdp.com`; `admin/console.localcen.com` once the `localcen` brand exists) via the catch-all | `/srv/apps/nextdp` (`current` → `20261119T040820`) |
 | TLS ask + host router | `apps-core-tls-ask` | `127.0.0.1:8099` | `/ask`: guards on-demand certificates. `/route`: tells the catch-all which app owns a host (since 2026-11-20) | `templates/caddy/apps-core-tls-ask.py` |
 

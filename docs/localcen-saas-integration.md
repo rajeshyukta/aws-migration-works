@@ -22,7 +22,7 @@ NextDP Core ↔ LocalCen: one LocalCen **tenant per brand**, machine API `https:
 |---|---|---|
 | 1 | Backup LocalCen-1-VM before changes | ✅ 2026-11-20 `/var/backups/localcen/pre-idp-20261120T155026Z/` + `D:\nmc-backup\localcen-1\pre-idp-20261120T155026Z\` |
 | 2 | Deploy latest LocalCen `main` | ✅ 2026-11-20 `df9f633`, release `20261120T160221`, 2 data migrations, health OK |
-| 3 | Next iDP: `cconsole` apps + key + webhook, owner `realm_admin`; realm `localcen` + tenant key; realm `localcen-people` (`myaccount.localcen.com`, phone only, Reverse OTP only, en/hi/te) | ⏳ script ready (`scripts/apps-core-vm/18-setup-localcen-idp`), **blocked: needs a Next iDP platform-admin login** (the saved `rajesh@nextidp.com` password was changed at first sign-in) |
+| 3 | Next iDP: `cconsole` apps + key + webhook, owner `realm_admin`; realm `localcen` + tenant key; realm `localcen-people` (`myaccount.localcen.com`, phone only, Reverse OTP only, en/hi/te) | ⏳ script written (`scripts/apps-core-vm/18-setup-localcen-idp`; to be reworked to read `private-data/localcen-idp-input.env`). **Waiting for the owner**: create realm `localcen` (API-only) + tenant key `localcen-tenants` (`tenants.admin`) in the master console (possible since Next iDP v0.89.1, 2026-11-20; v0.86.0 kept the Create button disabled for API-only) and write the input file (`LOCALCEN_REALM_ID=`, `LOCALCEN_TENANT_KEY=`) |
 | 4 | Owner: TXT `_n1-verify.myaccount.localcen.com` (value from step 3) | ⏳ |
 | 5 | LocalCen: Next iDP env, `localcen idp:client-keys`, `IDP_LOGIN=true`, restart; owner signs in to `admin.localcen.cconsole.com` | ⏳ |
 | 6 | LocalCen tenants `localcen` + `nextdp` (key, webhook secret, webhook URL, `cconsole` organisation) | ⏳ |
