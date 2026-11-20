@@ -1,0 +1,50 @@
+# Managed: domains-rajesh-app (CodeIgniter 4 + PostgreSQL 16 on Web-1)
+# - domains.rajesh.in: uses local self-signed TLS certificate (/etc/caddy/certs/domains.rajesh.in.{crt,key})
+# - domains.rajesh1.com: uses Caddy automatic Let's Encrypt HTTPS
+
+(domains_rajesh_app) {
+	encode zstd gzip
+	root * /srv/phpapps/domains.rajesh.app/public
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@hidden path /app/* /system/* /writable/* /tests/* /ThirdParty/* /vendor/* /.env* /.git* /spark /composer.* /builds* /phpunit*
+	handle @hidden {
+		respond 404
+	}
+
+	php_fastcgi unix//run/php/app-domains.rajesh.app.sock
+	file_server
+}
+
+www.domains.rajesh.in {
+	tls /etc/caddy/certs/domains.rajesh.in.crt /etc/caddy/certs/domains.rajesh.in.key
+	redir https://domains.rajesh.in{uri} permanent
+}
+
+domains.rajesh.in {
+	tls /etc/caddy/certs/domains.rajesh.in.crt /etc/caddy/certs/domains.rajesh.in.key
+	import domains_rajesh_app
+	log {
+		output file /var/log/caddy/domains.rajesh.in.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+domains.rajesh1.com {
+	import domains_rajesh_app
+	log {
+		output file /var/log/caddy/domains.rajesh1.com.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

@@ -1,0 +1,23 @@
+# Web-1 (3.6.143.66, AWS Lightsail ap-south-1) — OGCEN PHP 8.4 + Static Caddyfile
+# Imports per-site configurations from /etc/caddy/sites-enabled/*.caddy.
+
+{
+	servers {
+		timeouts {
+			read_body 30s
+			read_header 15s
+			write 60s
+			idle 2m
+		}
+	}
+}
+
+:80 {
+	header {
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+	respond "Not Found" 404
+}
+
+import /etc/caddy/sites-enabled/*.caddy

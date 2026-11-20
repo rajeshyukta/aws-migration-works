@@ -1,0 +1,51 @@
+# Managed: rajeshyukta.in serving the mrajesh.com standalone PHP site directly on Web-1 (no redirect to mrajesh.com).
+rajeshyukta.in {
+	encode zstd gzip
+	root * /srv/phpapps/mrajesh.com/current/public
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'"
+		-Server
+	}
+
+	@versioned {
+		path /assets/* /icons/*
+		query v=*
+	}
+	header @versioned Cache-Control "public, max-age=31536000, immutable"
+
+	@blocked path_regexp blocked (^|/)\.|^/(assets|icons)/.*\.php$
+	handle @blocked {
+		respond 404
+	}
+
+	@static {
+		path /assets/* /icons/* /robots.txt /llms.txt /favicon.ico
+		file
+	}
+	handle @static {
+		file_server
+	}
+
+	handle {
+		rewrite * /index.php
+		php_fastcgi unix//run/php/app-mrajesh.com.sock {
+			resolve_root_symlink
+		}
+	}
+
+	log {
+		output file /var/log/caddy/rajeshyukta.in.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+www.rajeshyukta.in {
+	redir https://rajeshyukta.in{uri} permanent
+}
