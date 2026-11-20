@@ -18,7 +18,7 @@ Nightly backup of the AWS Lightsail **Mail VM** (`52.66.111.138`) to its own enc
 | Weekly verify | `nextdp-offsite-verify.timer`, Saturday 22:30 UTC = **Sunday 04:00 IST**: `restic check --read-data-subset=25%`, then restores the latest `nextdp_mail` dump into a temporary DB `nextdp_mail_restoretest`, counts the rows and drops the DB |
 | Failure alert | `OnFailure=` → `nextdp-backup-alert@.service` mails the last journal lines to **rajesh@nextdp.com** through the local SMTP listener. Tested 2026-11-20 |
 | Retention | 14 daily, 8 weekly, 12 monthly (`restic forget --prune` after each backup) |
-| Program | `/usr/local/sbin/nextdp-offsite-backup backup\|verify\|status\|alert` (source: `templates/backup/nextdp-offsite-backup.sh`) |
+| Program | `/usr/local/sbin/nextdp-offsite-backup backup\|verify\|status\|alert` (source: `templates/backup/nextdp-offsite-backup.sh`). Its built-in defaults are the Mail VM settings. The same program runs on Web-1 with `/etc/nextdp-backup/backup.conf` overrides ([`web-1-offsite-backup.md`](web-1-offsite-backup.md)). Updated on the Mail VM 2026-11-20 06:30 UTC (snapshot `2fb19da8` OK) |
 
 **Snapshot contents (host tag `mail-vm`, tags `nextdp-mail`, `nightly`):**
 - `/var/backups/nextdp/nightly/db/`: `pg_dump -Fc` of **every** app DB on cluster `16/main` (today `nextdp_mail` and `cconsole_hub`; new DBs are picked up automatically), plus `globals.sql` (roles) and `SHA256SUMS`. Not included: `postgres`, templates, and `*_aug_old`, `*_r2*`, `*_restoretest`, `*_failed`.

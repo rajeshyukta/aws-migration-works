@@ -25,9 +25,14 @@ Details: [`cconsole-hub-web-1.md`](cconsole-hub-web-1.md).
 - [x] **Owner: change 5 DNS A records to `3.6.143.66`** (done 2026-11-20): `hub`, `api.hub`, `admin.hub`, `docs.hub`, `sandbox.hub` (`.cconsole.com`).
 - [x] **Agent: run `06-deploy-cconsole-hub.ps1 -Phase sites`** (done 2026-11-20; Let's Encrypt on all 5 hosts).
 - [x] **Agent: retire on the Mail VM** with `scripts/mail-vm/17-remove-cconsole-hub.sh` (done 2026-11-20).
-- [ ] **Owner: set ZeptoMail + ResellerClub credentials** in `/srv/phpapps/cconsole-hub/ci4-app/.env` on Web-1, and create the first super admin (`php spark auth:create-admin`).
+- [ ] **Later: API keys for the hub** (owner provides, agent sets them on Web-1 in `/srv/phpapps/cconsole-hub/ci4-app/.env`, then `sudo systemctl reload php8.4-fpm`). All 4 are still `__SET_ON_SERVER__`:
+  - `ZEPTO_MAIL_API_KEY` (sender `noreply@cconsole.com`). Without it the hub cannot send email (2FA codes, notifications).
+  - `RESELLERCLUB_AUTH_USERID`, `RESELLERCLUB_API_KEY`, `RESELLERCLUB_CUSTOMER_ID`. Without them domain search/registration and the `domains:sync` / `domains:renewals` crons cannot reach ResellerClub. `RESELLERCLUB_SANDBOX = true` stays until the owner says to go live.
+  - Keys travel through chat or the AW Vault, never git. After setting them, test one sandbox domain check and one email.
+- [ ] **Later: first super admin for the hub**. Owner gives email + name. Agent runs `sudo -u webapps php spark auth:create-admin` in `ci4-app` and stores the generated password in `private-data/` (not in chat).
 - [ ] **Delete the old hub on the Mail VM after 2026-12-04**: `/srv/phpapps/cconsole-hub` and DB `cconsole_hub` (the R2 dump on this PC stays).
 
 ## Web-1
 
-- [ ] **Off-site backup for Web-1.** Web-1 has no backup of its own (DBs `domains_rajesh`, `web1_apps`, `cconsole_hub`, the SQLite files, `/srv`). Same pattern as the Mail VM ([`mail-vm-offsite-backup.md`](mail-vm-offsite-backup.md)) with its own repo prefix, e.g. `aws-web-1`.
+- [x] **Off-site backup for Web-1** (done 2026-11-20): nightly to R2 `nxtmngr-test/aws-web-1`, weekly verify + restore test, alert mail via the Mail VM. See [`web-1-offsite-backup.md`](web-1-offsite-backup.md).
+- [ ] **Upload `private-data/web-1-offsite-backup.env` to the AW Vault** (project `dev-workspace`). Same reason as the Mail VM file: without it the Web-1 backup cannot be restored.
