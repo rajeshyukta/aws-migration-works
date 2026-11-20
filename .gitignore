@@ -17,5 +17,6 @@ build/
 *.log
 *.dump
 *.sql
+!templates/nextdp-core-ci4-base.sql
 *.tar.gz
 *.zip

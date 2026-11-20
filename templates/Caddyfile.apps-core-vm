@@ -1,0 +1,130 @@
+# Apps-Core-VM (43.204.42.99) — Consolidated Caddyfile
+# Serves:
+#   - Next iDP    (:8080) — nextidp.com + custom realm hosts
+#   - NextDP Core (:8090) — core.nextdp.com + brand hosts
+#   - LocalCen    (:8092) — localcen.cconsole.com, admin.localcen.cconsole.com + member hosts
+{
+    on_demand_tls {
+        ask http://127.0.0.1:8099/ask
+    }
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+(n1_proxy) {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+    reverse_proxy 127.0.0.1:8080
+}
+
+(nextdp_proxy) {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+    reverse_proxy 127.0.0.1:8090 {
+        header_up Host {host}
+    }
+}
+
+# ── Next iDP master console & aliases (:8080) ─────────────────────────────
+https://nextidp.com {
+    import n1_proxy
+    log {
+        output file /var/log/caddy/nextidp-master.access.log
+    }
+}
+
+https://www.nextidp.com, https://admin.nextidp.com {
+    redir https://nextidp.com{uri} permanent
+}
+
+# ── NextDP Core master control plane (:8090) ──────────────────────────────
+https://core.nextdp.com {
+    import nextdp_proxy
+    log {
+        output file /var/log/caddy/nextdp-core.access.log
+    }
+}
+
+# ── LocalCen consoles (:8092) ─────────────────────────────────────────────
+https://admin.localcen.cconsole.com, https://admin.localcen.com {
+    encode gzip
+    handle /v1/* {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle /auth/* {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle /no-access {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle {
+        root * /srv/apps/localcen/current/consoles/admin
+        try_files {path} /index.html
+        file_server
+    }
+    log {
+        output file /var/log/caddy/admin-localcen.access.log
+    }
+}
+
+https://localcen.cconsole.com, https://console.localcen.com {
+    encode gzip
+    handle /v1/* {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle /auth/* {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle /no-access {
+        reverse_proxy 127.0.0.1:8092
+    }
+    handle {
+        root * /srv/apps/localcen/current/consoles/tenant
+        try_files {path} /index.html
+        file_server
+    }
+    log {
+        output file /var/log/caddy/localcen.access.log
+    }
+}
+
+# ── Shared-Caddy site snippets (incl. localcen-hosts.caddy) ───────────────
+import /etc/caddy/sites-enabled/*.caddy
+
+# ── Dynamic custom / realm / brand host catch-all ─────────────────────────
+# Next iDP (:8080) answers 421 Misdirected Request for hosts it does not own -> fall through to NextDP Core (:8090).
+https:// {
+    tls {
+        on_demand
+    }
+
+    @lc_internal path /internal/*
+    respond @lc_internal 404
+
+    reverse_proxy 127.0.0.1:8080 {
+        header_up Host {host}
+        @not_nextidp status 421
+        handle_response @not_nextidp {
+            reverse_proxy 127.0.0.1:8090 {
+                header_up Host {host}
+            }
+        }
+    }
+
+    log {
+        output file /var/log/caddy/apps-core-catchall.access.log
+    }
+}
+
+http:// {
+    redir https://{host}{uri} 308
+}
