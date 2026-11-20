@@ -18,7 +18,7 @@ Setup scripts, Caddy/systemd templates, runbooks and backup tooling for the **AW
 
 - `docs/`: VM reference, runbooks, TODO, migration records (mail DB upgrade, CConsole Hub move, backups, realms).
 - `scripts/<vm>/`: idempotent setup/deploy/status scripts. Each `.ps1` runs from this PC and calls a `.sh` on the VM through `scripts/mail-vm/common.ps1` (`Get-VmTarget -Name "<VM>"`). `scripts/vm-inventory.sh` collects read-only facts for the reference doc.
-- `scripts/r2/`: fetch any old Azure DB from the R2 backup, restore it side by side as `<db>_r2`, and export the brand/DNS inventories ([`docs/azure-r2-restore.md`](docs/azure-r2-restore.md)).
+- `scripts/r2/`: fetch any old Azure DB from the R2 backup (or, owner-approved, from an Azure disk), restore it side by side as `<db>_r2` / `<db>_azure`, export the brand/DNS inventories. Brand and DNS imports: `scripts/apps-core-vm/15`, `16`, `scripts/dns-vm/09` ([`docs/azure-r2-restore.md`](docs/azure-r2-restore.md)).
 - `templates/`: Caddyfiles, site files, backup tool (`templates/backup/`), CoreDNS, maintenance page (no secrets).
 - `private-data/` (gitignored): SSH key, `vms-details.txt`, `r2.env`, backup passwords, pulled app credentials. Never commit; keep a copy in a password manager + offline.
 - `temp/` (gitignored): scratch scripts and command outputs.

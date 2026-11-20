@@ -2,7 +2,7 @@
 # Runs on the target VM. Restores an R2 dump into a SIDE-BY-SIDE database whose name ends in _r2
 # (e.g. nextdp_core_r2), or drops such a database. Never touches a live database or a service.
 #
-# Env: MODE=restore|drop, TARGET_DB (must match ^[a-z][a-z0-9_]*_r2$),
+# Env: MODE=restore|drop, TARGET_DB (must end in _r2 or _azure),
 #      DUMP_FILE (restore; uploaded temp file, deleted on exit), DB_OWNER (default postgres),
 #      DB_COMMENT (restore; stored as COMMENT ON DATABASE, e.g. the snapshot id and time)
 set -Eeuo pipefail
@@ -19,7 +19,7 @@ cleanup() { [ -n "$DUMP_FILE" ] && rm -f "$DUMP_FILE"; sudo rm -f "$PG_TMP"; rm 
 trap cleanup EXIT
 cd /tmp
 
-[[ "$TARGET_DB" =~ ^[a-z][a-z0-9_]*_r2$ ]] || { echo "FATAL: TARGET_DB must end in _r2 (got '$TARGET_DB')"; exit 1; }
+[[ "$TARGET_DB" =~ ^[a-z][a-z0-9_]*_(r2|azure)$ ]] || { echo "FATAL: TARGET_DB must end in _r2 or _azure (got '$TARGET_DB')"; exit 1; }
 [[ "$DB_OWNER" =~ ^[a-z_][a-z0-9_]*$ ]] || { echo "FATAL: invalid DB_OWNER"; exit 1; }
 P() { sudo -u postgres psql -p 5432 -Xq -v ON_ERROR_STOP=1 "$@"; }
 

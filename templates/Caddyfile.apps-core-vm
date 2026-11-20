@@ -53,11 +53,14 @@ https://core.nextdp.com {
     }
 }
 
-# ── Shared-Caddy site snippets ───────────────
+# ── Shared-Caddy site snippets (incl. localcen-hosts.caddy) ───────────────
 import /etc/caddy/sites-enabled/*.caddy
 
 # ── Dynamic custom / realm / brand host catch-all ─────────────────────────
-# Next iDP (:8080) answers 421 Misdirected Request for hosts it does not own -> fall through to NextDP Core (:8090).
+# The router (apps-core-tls-ask.py /route on :8099) answers X-Apps-Backend: idp | core per host, so the
+# request (with its body) goes straight to the right app. Do NOT go back to "send to Next iDP, fall
+# through on 421": the first hop consumes the request body and every POST on brand hosts became a 502
+# (fixed 2026-11-20). The 421 fallthrough stays only as a safety net for idp-routed hosts.
 https:// {
     tls {
         on_demand
@@ -66,12 +69,27 @@ https:// {
     @lc_internal path /internal/*
     respond @lc_internal 404
 
-    reverse_proxy 127.0.0.1:8080 {
-        header_up Host {host}
-        @not_nextidp status 421
-        handle_response @not_nextidp {
-            reverse_proxy 127.0.0.1:8090 {
-                header_up Host {host}
+    route {
+        request_header -X-Apps-Backend
+        forward_auth 127.0.0.1:8099 {
+            uri /route
+            header_up X-Forwarded-Host {host}
+            copy_headers X-Apps-Backend
+        }
+        @core header X-Apps-Backend core
+        reverse_proxy @core 127.0.0.1:8090 {
+            header_up Host {host}
+            header_up -X-Apps-Backend
+        }
+        reverse_proxy 127.0.0.1:8080 {
+            header_up Host {host}
+            header_up -X-Apps-Backend
+            @not_nextidp status 421
+            handle_response @not_nextidp {
+                reverse_proxy 127.0.0.1:8090 {
+                    header_up Host {host}
+                    header_up -X-Apps-Backend
+                }
             }
         }
     }

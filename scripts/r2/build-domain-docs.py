@@ -175,7 +175,8 @@ def build(brands_doc, dns_doc):
             b["idp_status"] if b else "-", users_per_brand.get(bid, 0),
             sum(1 for i in items if i["registered"]), sum(1 for i in items if i["external"]),
             sum(1 for i in items if i["zone"]), sum(len(i["sites"]) for i in items),
-            ("brand exists" if b and b["slug"] in live_brand_slugs else "no"),
+            ("brand exists" if b and b["slug"] in live_brand_slugs else "no brand")
+            + f"; {sum(1 for f in per_brand.get(bid, {}) if f in live_core)}/{len(per_brand.get(bid, {}))} domains in live NextDP Core",
         ])
     L += table(["Brand", "Name", "Primary product", "Hosts: primary / admin / console / accounts", "Sign-in (iDP)",
                 "Users", "Registered", "External", "Core DNS zones", "Sites", "On AWS now"], rows)
@@ -200,8 +201,11 @@ def build(brands_doc, dns_doc):
                      + (" (no primary domain set)" if not b["primary_domain"] else ""))
             L.append(f"- Sender: `{b['sender_email'] or '-'}`. Brand nameservers: `{' '.join((b['nameservers'] or '').split()) or '-'}`.")
             L.append(f"- Features on: {', '.join(sorted(feats.get(bid, []))) or '-'}.")
+            moved = sum(1 for f in items if f in live_core)
             L.append(f"- Users: {users_per_brand.get(bid, 0)}. On AWS now: "
-                     + ("brand exists in live NextDP Core." if b["slug"] in live_brand_slugs else "not created yet."))
+                     + ("brand exists in live NextDP Core" if b["slug"] in live_brand_slugs else "brand not created")
+                     + f"; {moved} of {len(items)} domains are in live NextDP Core"
+                     + (" (moved into a live brand as external domains)." if moved else "."))
         else:
             L.append(f"- Brand id `{bid}` has no row in `brands`; these domains belong to users with that brand id.")
         L.append("")
