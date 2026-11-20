@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Runs on Apps-Core-VM. Sets up everything LocalCen needs in Next iDP (docs/localcen-saas-integration.md):
-#   A. realm cconsole: apps localcen-console (access assigned, organisations) + localcen-admin (roles
-#      realm_admin/support), realm key localcen-contract, webhook -> LocalCen /v1/idp/webhook,
-#      organisations on, the owner's cconsole account as realm_admin
-#   B. top-level realm localcen (API-only, platform reverse-OTP gateway allowed) + tenant key localcen-tenants
-#   C. child realm localcen-people on myaccount.localcen.com (hosted): phone-only sign-in with Reverse OTP
-#      only (reverse SMS + reverse WhatsApp), sign-up by phone, en/hi/te, gateways "inherit",
-#      webhook -> LocalCen /v1/idp/tenant-webhook
+# Runs on Apps-Core-VM. Sets up what LocalCen needs in Next iDP (docs/localcen-saas-integration.md):
+#   A. realm cconsole (signed in as its realm admin, /root/.nextidp-cconsole-dns.env): apps
+#      localcen-console (access assigned) + localcen-admin (roles realm_admin/support), realm key
+#      localcen-contract, webhook -> LocalCen /v1/idp/webhook, the owner's cconsole account as realm_admin
+#   B. top-level realm localcen (made by the owner; hosted on localcen.nextidp.com) is only checked:
+#      its tenant key comes from /root/.localcen-idp-input.env (LOCALCEN_REALM_ID, LOCALCEN_TENANT_KEY)
+#   C. child realm localcen-people on myaccount.localcen.com (hosted), made with the tenant key:
+#      phone-only sign-in with Reverse OTP only (reverse SMS + reverse WhatsApp), sign-up by phone,
+#      en/hi/te, webhook -> LocalCen /v1/idp/tenant-webhook
 #   D. all values in 0600 /root/.localcen-idp.env (never printed)
+# Not done here (need a signed-in session, owner steps): master "Allow platform SMS gateway" on localcen,
+# and Reverse OTP -> SMS / WhatsApp = inherit in the localcen console (localcen-people uses the parent's).
 # MODE=check (read-only report) | apply. Idempotent: existing objects are kept; secrets kept from the env file.
 set -Eeuo pipefail
 exec 2>&1
@@ -19,13 +22,15 @@ import http.cookiejar, json, os, sys, tempfile, urllib.error, urllib.parse, urll
 from datetime import datetime, timedelta, timezone
 
 MODE, OWNER_EMAIL = os.environ["MODE"], os.environ["OWNER_EMAIL"].lower()
+APPLY = MODE == "apply"
 BASE = "http://127.0.0.1:8080"
 MASTER = "nextidp.com"
+CC_HOST = "accounts.cconsole.com"
 OUT = "/root/.localcen-idp.env"
 LC = "https://localcen.cconsole.com"
 LC_ADMIN = "https://admin.localcen.cconsole.com"
 PEOPLE_HOST = "myaccount.localcen.com"
-APPLY = MODE == "apply"
+PEOPLE_SLUG = "localcen-people"
 
 def envf(p):
     d = {}
@@ -37,219 +42,218 @@ def envf(p):
     return d
 
 saved = envf(OUT)
-adm = envf("/root/.nextidp-operator.env") or {}
-adm2 = envf("/root/.nextidp-admin-secrets.env")
-email = adm.get("NEXTIDP_OPERATOR_EMAIL") or adm.get("NEXTIDP_ADMIN_EMAIL") or adm2.get("NEXTIDP_ADMIN_EMAIL", "")
-pw = adm.get("NEXTIDP_OPERATOR_PASSWORD") or adm.get("NEXTIDP_ADMIN_PASSWORD") or adm2.get("NEXTIDP_ADMIN_PASSWORD", "")
-if not email or not pw:
-    sys.exit("FATAL: no Next iDP platform admin credentials on this VM")
+inp = envf("/root/.localcen-idp-input.env")
+LCID, TK = inp.get("LOCALCEN_REALM_ID", ""), inp.get("LOCALCEN_TENANT_KEY", "")
+if not LCID or not TK.startswith("n1k_"):
+    sys.exit("FATAL: /root/.localcen-idp-input.env needs LOCALCEN_REALM_ID and LOCALCEN_TENANT_KEY (n1k_...)")
+# cconsole access: an owner-made realm key (CCONSOLE_SETUP_KEY, scope realm.admin) in the input file;
+# else the realm admin login in /root/.nextidp-cconsole-dns.env (fails when it asks for a second factor).
+CC_KEY = inp.get("CCONSOLE_SETUP_KEY", "")
+ccf = envf("/root/.nextidp-cconsole-dns.env")
+CC_EMAIL, CC_PW = ccf.get("CCONSOLE_ADMIN_EMAIL", ""), ccf.get("CCONSOLE_ADMIN_PASSWORD", "")
 
-jar = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+class Api:
+    """bearer=None: a console session on host (cookies); else Authorization: Bearer."""
+    def __init__(self, host, client=None, bearer=None):
+        self.host, self.client, self.bearer = host, client, bearer
+        self.op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
-def call(method, path, body=None, realm=None, bearer=None, host=MASTER, ok=(200, 201, 204), quiet404=False):
-    h = {"Host": host, "Accept": "application/json"}
-    if not bearer:
-        h.update({"Origin": f"https://{host}", "X-N1-Client": "web-master"})
-    else:
-        h["Authorization"] = f"Bearer {bearer}"
-    if realm:
-        h["X-N1-Realm"] = realm
-    data = None
-    if body is not None:
-        data = json.dumps(body).encode(); h["Content-Type"] = "application/json"
-    req = urllib.request.Request(BASE + path, data=data, method=method, headers=h)
-    try:
-        with opener.open(req, timeout=30) as r:
-            raw = r.read().decode("utf-8", "replace")
-            return r.status, (json.loads(raw) if raw.strip() else {})
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode("utf-8", "replace")
+    def __call__(self, method, path, body=None, realm=None, ok=(200, 201, 204), soft=()):
+        h = {"Host": self.host, "Accept": "application/json"}
+        if self.bearer:
+            h["Authorization"] = f"Bearer {self.bearer}"
+        else:
+            h.update({"Origin": f"https://{self.host}", "X-N1-Client": self.client})
+        if realm:
+            h["X-N1-Realm"] = realm
+        data = None
+        if body is not None:
+            data = json.dumps(body).encode(); h["Content-Type"] = "application/json"
+        req = urllib.request.Request(BASE + path, data=data, method=method, headers=h)
         try:
-            j = json.loads(raw) if raw.strip() else {}
-        except Exception:
-            j = {"raw": raw[:300]}
-        if e.code in ok:
-            return e.code, j
-        if quiet404 and e.code == 404:
-            return 404, j
-        raise SystemExit(f"FATAL: {method} {path} -> HTTP {e.code}: {json.dumps(j)[:400]}")
+            with self.op.open(req, timeout=30) as r:
+                raw = r.read().decode("utf-8", "replace")
+                return r.status, (json.loads(raw) if raw.strip() else {})
+        except urllib.error.HTTPError as e:
+            raw = e.read().decode("utf-8", "replace")
+            try:
+                j = json.loads(raw) if raw.strip() else {}
+            except Exception:
+                j = {"raw": raw[:300]}
+            if e.code in ok or e.code in soft:
+                return e.code, j
+            raise SystemExit(f"FATAL: {method} {path} -> HTTP {e.code}: {json.dumps(j)[:400]}")
 
-call("POST", "/api/v1/auth/login", {"email": email, "password": pw})
-call("POST", "/api/v1/auth/reauth", {"Password": pw})
-print(f"master session OK; MODE={MODE}")
-
-def realm_by_slug(slug):
-    _, r = call("GET", "/api/v1/admin/realms?q=" + urllib.parse.quote(slug) + "&limit=100")
-    return next((x for x in (r.get("data") or []) if x.get("slug") == slug), None)
-
-def realm_detail(rid):
-    _, r = call("GET", f"/api/v1/admin/realms/{rid}")
-    d = r.get("data") or {}
-    return d.get("realm") or d, d
+def data(j):
+    return j.get("data", j) if isinstance(j, dict) else j
 
 out = dict(saved)
+print(f"MODE={MODE}")
 
 # ---------- A. cconsole ----------
-cc = realm_by_slug("cconsole")
-if not cc:
-    sys.exit("FATAL: realm cconsole not found")
-ccid = cc["id"]
-ccv, _ = realm_detail(ccid)
-print(f"[A] cconsole {ccid} host={ccv.get('issuer_host')} status={ccv.get('host_status')} organizations_enabled={ccv.get('organizations_enabled')}")
-_, us = call("GET", "/api/v1/realm/users?limit=100", realm=ccid)
-for u in us.get("data") or []:
-    print(f"    user {u.get('email')} role={u.get('role')}")
-owner = next((u for u in (us.get("data") or []) if (u.get("email") or "").lower() == OWNER_EMAIL), None)
-_, cl = call("GET", "/api/v1/realm/clients?limit=100", realm=ccid)
-clients = cl.get("data") or []
-print("    apps: " + ", ".join(sorted(c.get("client_id", "") for c in clients)))
-_, ks = call("GET", "/api/v1/realm/api-keys", realm=ccid)
-print("    keys: " + ", ".join(sorted(k.get("name", "") for k in (ks.get("data") or []))))
-_, wh = call("GET", "/api/v1/realm/webhooks", realm=ccid)
-print("    webhooks: " + ", ".join(sorted(w.get("url", "") for w in (wh.get("data") or []))))
+def cconsole():
+    if CC_KEY:
+        return Api(CC_HOST, bearer=CC_KEY), "key CCONSOLE_SETUP_KEY"
+    if not CC_EMAIL or not CC_PW:
+        return None, "no cconsole login or key"
+    api = Api(CC_HOST, client="web-brand")
+    st, j = api("POST", "/api/v1/auth/login", {"email": CC_EMAIL, "password": CC_PW}, soft=(401, 403, 429))
+    if st != 200:
+        return None, f"sign-in as {CC_EMAIL} -> HTTP {st}"
+    if j.get("mfa_required"):
+        return None, f"sign-in as {CC_EMAIL} asks for a second factor"
+    return api, f"session {CC_EMAIL}"
 
-# ---------- B/C. localcen + localcen-people ----------
-lc = realm_by_slug("localcen")
-pp = realm_by_slug("localcen-people")
-print(f"[B] realm localcen: {'exists ' + lc['id'] if lc else 'missing'}; [C] localcen-people: {'exists ' + pp['id'] if pp else 'missing'}")
-_, sfx = call("GET", "/api/v1/admin/system/suffixes", ok=(200,), quiet404=True)
-print(f"    platform suffixes: {json.dumps(sfx.get('data', sfx))[:200]}")
-_, gw = call("GET", "/api/v1/admin/smsgw", ok=(200,), quiet404=True)
-print(f"    platform reverse-OTP gateway: {json.dumps(gw.get('data', gw))[:300]}")
+cc, how = cconsole()
+CC_SESSION = how.startswith("session")
+if cc is None:
+    print(f"[A] cconsole: NO ACCESS ({how}); add CCONSOLE_SETUP_KEY to private-data/localcen-idp-input.env")
+    if APPLY:
+        sys.exit("FATAL: cconsole access needed for apply")
+ccv, ccid, owner = {}, "", None
+if cc is not None:
+    print(f"[A] cconsole access: {how}")
+    _, j = cc("GET", "/api/v1/realm")
+    ccv = data(j)
+    ccid = ccv.get("id", "")
+    print(f"[A] cconsole {ccid} issuer={ccv.get('issuer')} organizations_enabled={ccv.get('organizations_enabled')}")
+    _, j = cc("GET", "/api/v1/realm/users?limit=100")
+    users = data(j) or []
+    for u in users:
+        print(f"    user {u.get('email')} role={u.get('role')}")
+    owner = next((u for u in users if (u.get("email") or "").lower() == OWNER_EMAIL), None)
+    _, j = cc("GET", "/api/v1/realm/clients?limit=100")
+    print("    apps: " + (", ".join(sorted(c.get("client_id", "") for c in (data(j) or []))) or "-"))
+    _, j = cc("GET", "/api/v1/realm/api-keys")
+    print("    keys: " + (", ".join(sorted(k.get("name", "") for k in (data(j) or []))) or "-"))
+    _, j = cc("GET", "/api/v1/realm/webhooks")
+    print("    webhooks: " + (", ".join(sorted(w.get("url", "") for w in (data(j) or []))) or "-"))
+
+# ---------- B. localcen (tenant key on the master host) ----------
+tk = Api(MASTER, bearer=TK)
+st, j = tk("GET", "/api/v1/realm", realm=LCID, soft=(401, 403, 404))
+if st != 200:
+    sys.exit(f"FATAL: tenant key on realm {LCID} -> HTTP {st} {json.dumps(j)[:200]}")
+lcv = data(j)
+print(f"[B] localcen {lcv.get('id')} slug={lcv.get('slug')} hosting={lcv.get('hosting_mode')} host={lcv.get('issuer_host')} "
+      f"status={lcv.get('host_status')} allow_platform_smsgw={lcv.get('allow_platform_smsgw')}")
+if lcv.get("slug") != "localcen" or lcv.get("parent_realm_id"):
+    sys.exit("FATAL: LOCALCEN_REALM_ID is not the top-level realm 'localcen'")
+_, j = tk("GET", "/api/v1/realm/tenants?limit=100", realm=LCID)
+kids = data(j) or []
+pp = next((x for x in kids if x.get("slug") == PEOPLE_SLUG), None)
+print("    tenants: " + (", ".join(f"{x.get('slug')}({x.get('issuer_host') or 'api-only'})" for x in kids) or "-"))
+if not pp:
+    _, j = tk("POST", "/api/v1/realm/tenants/check-hostname", {"hostname": PEOPLE_HOST}, realm=LCID)
+    print(f"[C] {PEOPLE_SLUG} missing; hostname {PEOPLE_HOST}: {json.dumps(data(j))[:200]}")
+else:
+    print(f"[C] {PEOPLE_SLUG} exists {pp.get('id')} host={pp.get('issuer_host')} status={pp.get('host_status')}")
 
 if not APPLY:
     print("CHECK DONE (nothing written)")
     sys.exit(0)
 
 # ===== APPLY =====
-# A1 organisations on cconsole
-if not ccv.get("organizations_enabled"):
-    call("PATCH", f"/api/v1/admin/realms/{ccid}", {"organizations_enabled": True})
-    print("[A] cconsole organizations_enabled -> true")
+if CC_SESSION:
+    cc("POST", "/api/v1/auth/reauth", {"Password": CC_PW})
 
-def ensure_client(realm, ext, body, secret_key):
-    _, r = call("GET", "/api/v1/realm/clients?external_id=" + urllib.parse.quote(ext), realm=realm)
-    found = next((c for c in (r.get("data") or []) if c.get("external_id") == ext), None)
+def ensure_client(api, ext, body, secret_key, realm=None):
+    _, r = api("GET", "/api/v1/realm/clients?external_id=" + urllib.parse.quote(ext), realm=realm)
+    found = next((c for c in (data(r) or []) if c.get("external_id") == ext), None)
     if found:
         cid = found["client_id"]
         sec = out.get(secret_key, "")
-        if not sec:
-            _, rs = call("POST", f"/api/v1/realm/clients/{found.get('id') or cid}/rotate-secret", {}, realm=realm)
-            sec = rs.get("client_secret", ""); act = "secret_rotated"
-        else:
-            act = "existing"
-        return cid, sec, act
-    _, r = call("POST", "/api/v1/realm/clients", body, realm=realm, ok=(201,))
-    return (r.get("data") or {}).get("client_id", ""), r.get("client_secret", ""), "created"
+        if sec:
+            return cid, sec, "existing"
+        _, rs = api("POST", f"/api/v1/realm/clients/{found.get('id') or cid}/rotate-secret", {}, realm=realm)
+        return cid, rs.get("client_secret", "") or data(rs).get("client_secret", ""), "secret_rotated"
+    _, r = api("POST", "/api/v1/realm/clients", body, realm=realm, ok=(201,))
+    return data(r).get("client_id", ""), r.get("client_secret", ""), "created"
 
 common = {"type": "confidential", "token_auth": "client_secret_basic", "grant_types": ["authorization_code", "refresh_token"],
           "scopes": ["openid", "profile", "email", "offline_access"], "first_party": True, "require_pkce": True}
-cid, sec, act = ensure_client(ccid, "localcen-console", dict(common, name="localcen-console", external_id="localcen-console",
+cid, sec, act = ensure_client(cc, "localcen-console", dict(common, name="localcen-console", external_id="localcen-console",
     description="LocalCen tenant console", redirect_uris=[f"{LC}/auth/callback"], post_logout_redirect_uris=[f"{LC}/"],
     backchannel_logout_uri=f"{LC}/auth/backchannel-logout", home_uri=f"{LC}/", access_mode="assigned", allowed_organizations=[]),
     "IDP_CONSOLE_CLIENT_SECRET")
 out.update(IDP_CONSOLE_CLIENT_ID=cid, IDP_CONSOLE_CLIENT_SECRET=sec); print(f"[A] app localcen-console {cid} {act}")
-cid, sec, act = ensure_client(ccid, "localcen-admin", dict(common, name="localcen-admin", external_id="localcen-admin",
+cid, sec, act = ensure_client(cc, "localcen-admin", dict(common, name="localcen-admin", external_id="localcen-admin",
     description="LocalCen platform admin", redirect_uris=[f"{LC_ADMIN}/auth/callback"], post_logout_redirect_uris=[f"{LC_ADMIN}/"],
     backchannel_logout_uri=f"{LC_ADMIN}/auth/backchannel-logout", home_uri=f"{LC_ADMIN}/", access_mode="roles",
     allowed_roles=["realm_admin", "support"]), "IDP_ADMIN_CLIENT_SECRET")
 out.update(IDP_ADMIN_CLIENT_ID=cid, IDP_ADMIN_CLIENT_SECRET=sec); print(f"[A] app localcen-admin {cid} {act}")
 
-def ensure_key(realm, name, scopes, saved_key, bearer=None, host=MASTER):
-    _, r = call("GET", "/api/v1/realm/api-keys", realm=realm, bearer=bearer, host=host)
-    found = next((k for k in (r.get("data") or []) if k.get("name") == name), None)
-    if found and out.get(saved_key, "").startswith("n1k_"):
-        return out[saved_key], "existing"
+_, r = cc("GET", "/api/v1/realm/api-keys")
+found = next((k for k in (data(r) or []) if k.get("name") == "localcen-contract"), None)
+if found and out.get("IDP_API_KEY", "").startswith("n1k_"):
+    print("[A] key localcen-contract existing")
+else:
     if found:
-        call("DELETE", f"/api/v1/realm/api-keys/{found['id']}", realm=realm, bearer=bearer, host=host)
+        cc("DELETE", f"/api/v1/realm/api-keys/{found['id']}")
     exp = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    _, r = call("POST", "/api/v1/realm/api-keys", {"name": name, "scopes": scopes, "expires_at": exp}, realm=realm,
-                bearer=bearer, host=host, ok=(201,))
-    return r.get("secret_key", ""), "created"
+    _, r = cc("POST", "/api/v1/realm/api-keys", {"name": "localcen-contract", "expires_at": exp, "scopes": ["users.read",
+              "users.write", "orgs.read", "orgs.write", "clients.write", "clients.self", "events.read", "signals.write", "dsr.ack"]},
+              ok=(201,))
+    out["IDP_API_KEY"] = r.get("secret_key", "") or data(r).get("secret_key", "")
+    print("[A] key localcen-contract " + ("recreated" if found else "created"))
 
-k, act = ensure_key(ccid, "localcen-contract", ["users.read", "users.write", "orgs.read", "orgs.write", "clients.write",
-                    "clients.self", "events.read", "signals.write", "dsr.ack"], "IDP_API_KEY")
-out["IDP_API_KEY"] = k; print(f"[A] key localcen-contract {act}")
-
-def ensure_webhook(realm, url, events, saved_key, desc, bearer=None):
-    _, r = call("GET", "/api/v1/realm/webhooks", realm=realm, bearer=bearer)
-    found = next((w for w in (r.get("data") or []) if w.get("url") == url), None)
+def ensure_webhook(api, url, events, saved_key, desc, realm=None):
+    _, r = api("GET", "/api/v1/realm/webhooks", realm=realm)
+    found = next((w for w in (data(r) or []) if w.get("url") == url), None)
     if found and out.get(saved_key):
         return out[saved_key], "existing"
     if found:
-        _, rs = call("POST", f"/api/v1/realm/webhooks/{found['id']}/rotate-secret", {}, realm=realm, bearer=bearer)
-        return rs.get("secret", ""), "secret_rotated"
-    _, r = call("POST", "/api/v1/realm/webhooks", {"url": url, "description": desc, "events": events}, realm=realm,
-                bearer=bearer, ok=(201,))
-    return r.get("secret", ""), "created"
+        _, rs = api("POST", f"/api/v1/realm/webhooks/{found['id']}/rotate-secret", {}, realm=realm)
+        return rs.get("secret", "") or data(rs).get("secret", ""), "secret_rotated"
+    _, r = api("POST", "/api/v1/realm/webhooks", {"url": url, "description": desc, "events": events}, realm=realm, ok=(201,))
+    return r.get("secret", "") or data(r).get("secret", ""), "created"
 
-s, act = ensure_webhook(ccid, f"{LC}/v1/idp/webhook", ["user.updated", "user.email_changed", "user.deleted",
+s, act = ensure_webhook(cc, f"{LC}/v1/idp/webhook", ["user.updated", "user.email_changed", "user.deleted",
                         "privacy.dsr.erasure_requested"], "IDP_WEBHOOK_SECRET", "LocalCen consoles")
 out["IDP_WEBHOOK_SECRET"] = s; print(f"[A] webhook {LC}/v1/idp/webhook {act}")
 
 if owner and owner.get("role") != "realm_admin":
-    call("PATCH", f"/api/v1/realm/users/{owner['id']}", {"role": "realm_admin"}, realm=ccid)
+    cc("PATCH", f"/api/v1/realm/users/{owner['id']}", {"role": "realm_admin"})
     print(f"[A] {OWNER_EMAIL} -> realm_admin")
 elif owner:
     print(f"[A] {OWNER_EMAIL} already realm_admin")
 else:
     print(f"[A] WARNING: {OWNER_EMAIL} has no cconsole account; create it, then rerun")
-
-# B. top-level localcen (API-only) + platform gateway flag + tenant key
-if not lc:
-    _, r = call("POST", "/api/v1/admin/realms", {"name": "LocalCen", "slug": "localcen", "hosting_mode": "api_only"}, ok=(201,))
-    lc = r.get("data") or {}
-    print(f"[B] realm localcen created {lc.get('id')}")
-lcid = lc["id"]
-lcv, _ = realm_detail(lcid)
-if not lcv.get("allow_platform_smsgw"):
-    call("PATCH", f"/api/v1/admin/realms/{lcid}", {"allow_platform_smsgw": True})
-    print("[B] localcen allow_platform_smsgw -> true")
-tk, act = ensure_key(lcid, "localcen-tenants", ["tenants.admin"], "IDP_TENANT_KEY")
-out["IDP_TENANT_KEY"] = tk; print(f"[B] tenant key localcen-tenants {act}")
+if not ccv.get("organizations_enabled"):
+    print("[A] WARNING: cconsole organizations are off (master console: Organizations on)")
 
 # C. child localcen-people (hosted, myaccount.localcen.com) via the tenant key
 if not pp:
-    _, r = call("POST", "/api/v1/realm/tenants", {"name": "LocalCen ID", "slug": "localcen-people", "hostname": PEOPLE_HOST,
-                "hosting_mode": "hosted"}, realm=lcid, bearer=tk, ok=(201,))
-    pp = r.get("data") or {}
-    print(f"[C] realm localcen-people created {pp.get('id')}")
+    _, r = tk("POST", "/api/v1/realm/tenants", {"name": "LocalCen ID", "slug": PEOPLE_SLUG, "hostname": PEOPLE_HOST,
+              "hosting_mode": "hosted"}, realm=LCID, ok=(201,))
+    pp = data(r)
+    print(f"[C] realm {PEOPLE_SLUG} created {pp.get('id')}")
 ppid = pp["id"]
-_, td = call("GET", f"/api/v1/realm/tenants/{ppid}", realm=lcid, bearer=tk)
-tdd = td.get("data") or {}
-dns = tdd.get("dns") or []
-ppv = tdd.get("realm") or tdd
-call("PATCH", "/api/v1/realm", {"login_policy": {"identifier_policy": "phone", "sign_in_identifiers": ["phone"], "password": False,
-     "passkeys": False, "magic_link": False, "phone_otp": True, "otp_signup": True,
-     "phone_verification_channels": ["reverse_sms", "reverse_whatsapp"], "require_mfa": False, "allowed_mfa": [],
-     "require_verified_email": False}, "default_locale": "en", "supported_locales": ["en", "hi", "te"]}, realm=ppid, bearer=tk)
-print("[C] login policy: phone only, Reverse OTP (reverse_sms, reverse_whatsapp), sign-up by phone; languages en/hi/te")
-ppd, _ = realm_detail(ppid)
-if not ppd.get("allow_platform_smsgw"):
-    call("PATCH", f"/api/v1/admin/realms/{ppid}", {"allow_platform_smsgw": True})
-    print("[C] localcen-people allow_platform_smsgw -> true")
-for ch in ("sms", "whatsapp"):
-    call("PUT", f"/api/v1/realm/smsgw/{ch}", {"mode": "inherit"}, realm=ppid)
-print("[C] reverse-OTP gateways: sms=inherit whatsapp=inherit")
-s, act = ensure_webhook(ppid, f"{LC}/v1/idp/tenant-webhook", ["user.status_changed", "user.suspended", "user.deactivated",
+tk("PATCH", "/api/v1/realm", {"login_policy": {"identifier_policy": "phone", "sign_in_identifiers": ["phone"], "password": False,
+   "passkeys": False, "magic_link": False, "phone_otp": True, "otp_signup": True,
+   "phone_verification_channels": ["reverse_sms", "reverse_whatsapp"], "require_mfa": False, "allowed_mfa": [],
+   "require_verified_email": False}, "default_locale": "en", "supported_locales": ["en", "hi", "te"]}, realm=ppid)
+_, r = tk("GET", "/api/v1/realm", realm=ppid)
+ppv = data(r)
+lp = ppv.get("login_policy") or {}
+print(f"[C] login policy: identifiers={lp.get('sign_in_identifiers')} phone_otp={lp.get('phone_otp')} otp_signup={lp.get('otp_signup')} "
+      f"channels={lp.get('phone_verification_channels')} password={lp.get('password')}; locales={ppv.get('supported_locales')}")
+s, act = ensure_webhook(tk, f"{LC}/v1/idp/tenant-webhook", ["user.status_changed", "user.suspended", "user.deactivated",
                         "user.deleted", "session.revoked_all", "user.updated", "user.phone_verified", "session.revoked"],
-                        "IDP_PEOPLE_WEBHOOK_SECRET", "LocalCen people", bearer=tk)
+                        "IDP_PEOPLE_WEBHOOK_SECRET", "LocalCen people", realm=ppid)
 out["IDP_PEOPLE_WEBHOOK_SECRET"] = s; print(f"[C] webhook {LC}/v1/idp/tenant-webhook {act}")
+_, r = tk("GET", f"/api/v1/realm/tenants/{ppid}", realm=LCID)
+td = data(r)
+dns = td.get("dns") or (td.get("domains") or [{}])[0].get("dns") or []
 
-txt = next((d for d in dns if d.get("type") == "TXT"), {})
 out.update({
-    "IDP_LOGIN": "true", "IDP_ISSUER": ccv.get("issuer") or "https://accounts.cconsole.com", "IDP_REALM_ID": ccid,
+    "IDP_LOGIN": "true", "IDP_ISSUER": ccv.get("issuer") or f"https://{CC_HOST}", "IDP_REALM_ID": ccid,
     "IDP_PUBLIC_ORIGIN": LC, "IDP_OWNER_CONTACT": OWNER_EMAIL, "IDP_MASTER_URL": "https://nextidp.com",
-    "IDP_PARENT_REALM_ID": lcid, "IDP_PEOPLE_REALM_ID": ppid, "IDP_PEOPLE_ISSUER": f"https://{PEOPLE_HOST}",
-    "IDP_PEOPLE_CLIENT_KEYS_FILE": "/srv/apps/localcen/shared/keys/local-apps.jwks.json", "IDP_TENANT_WEBHOOK_SECRET": "",
-    "PEOPLE_HOST_STATUS": ppv.get("host_status", ""), "DNS_TXT_NAME": txt.get("name", f"_n1-verify.{PEOPLE_HOST}"),
-    "DNS_TXT_VALUE": txt.get("value", ""),
+    "IDP_PARENT_REALM_ID": LCID, "IDP_TENANT_KEY": TK, "IDP_PEOPLE_REALM_ID": ppid, "IDP_PEOPLE_ISSUER": f"https://{PEOPLE_HOST}",
+    "IDP_PEOPLE_CLIENT_KEYS_FILE": "/srv/apps/localcen/shared/keys/local-apps.jwks.json",
 })
 missing = [k for k in ("IDP_CONSOLE_CLIENT_ID", "IDP_CONSOLE_CLIENT_SECRET", "IDP_ADMIN_CLIENT_ID", "IDP_ADMIN_CLIENT_SECRET",
                        "IDP_API_KEY", "IDP_WEBHOOK_SECRET", "IDP_TENANT_KEY", "IDP_PEOPLE_WEBHOOK_SECRET") if not out.get(k)]
-if missing:
-    sys.exit(f"FATAL: missing values: {missing}")
 fd, tmp = tempfile.mkstemp(prefix=".localcen-idp-", dir="/root")
 os.chmod(tmp, 0o600)
 with os.fdopen(fd, "w") as fh:
@@ -257,7 +261,9 @@ with os.fdopen(fd, "w") as fh:
     fh.write("".join(f"{k}={v}\n" for k, v in out.items()))
 os.replace(tmp, OUT)
 print(f"saved {OUT} (0600)")
-print(f"people realm host_status={ppv.get('host_status')}")
+if missing:
+    sys.exit(f"FATAL: missing values: {missing}")
+print(f"people realm host={ppv.get('issuer_host')} host_status={ppv.get('host_status')}")
 for d in dns:
     print(f"dns_required type={d.get('type')} name={d.get('name')} value={d.get('value')}")
 print("APPLY DONE")
