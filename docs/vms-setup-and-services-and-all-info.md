@@ -2,7 +2,7 @@
 
 One place to look up what runs where on the AWS servers that replaced the Azure/NMC fleet after the Azure suspension (18 Nov 2026).
 
-- **Last verified:** 2026-11-20 ~12:30 IST, from read-only checks on all 4 VMs plus DNS and port checks from the owner PC (Mail VM firewall re-checked 12:32 IST after the change). Re-check before relying on a number.
+- **Last verified:** 2026-11-20 ~14:40 IST (all 5 VMs; Apps-Core domain/TLS audit after LocalCen moved off). Re-check before relying on a number. Session record: [`session-handover-2026-11-20.md`](session-handover-2026-11-20.md).
 - **No secrets in this file.** It names *where* secrets are, never their values.
 - **Keep it current:** update this file whenever a VM, app, domain, database, port or backup changes, in the same commit as the change. To refresh the facts, run `scripts/vm-inventory.sh` (read-only) on each VM (section 11).
 
@@ -88,20 +88,24 @@ All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), C
 | App | Units | Port | Hostnames | Dir |
 |---|---|---|---|---|
 | **Next iDP** | `nextidp`, `nextidp-worker`; timers `nextidp-mail-prune`, `nextidp-contact-prune`, `nextidp-audit-prune` | `:8080` | `nextidp.com`, `www.nextidp.com`, `admin.nextidp.com`, and **any `accounts.<brand>`** (e.g. `accounts.nextdp.com`) via the on-demand TLS catch-all | `/opt/nextidp` |
-| **NextDP Core** | `nextdp`, `nextdp-worker`, `nextdp-scheduler` | `:8090` | `core.nextdp.com` (+ catch-all routes) | `/srv/apps/nextdp` (`current` → `20261119T040820`) |
+| **NextDP Core** | `nextdp`, `nextdp-worker`, `nextdp-scheduler` | `:8090` | `core.nextdp.com` + every active brand's `admin_domain` / `console_domain` (today `admin/console.nextdp.com`; `admin/console.localcen.com` once the `localcen` brand exists) via the catch-all | `/srv/apps/nextdp` (`current` → `20261119T040820`) |
 | TLS ask | `apps-core-tls-ask` | `127.0.0.1:8099` | guards on-demand certificates | `templates/caddy/apps-core-tls-ask.py` |
 
 Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskcheck`, `fail2ban`.
 
 **Databases:** `nextidp` (13 MB, owner `nextidp`), `nextdp_core` (10 MB, `nextdp_core`). (`localcen_db` dropped 2026-11-20 after the move; final dump in `D:\nmc-backup\apps-core\localcen-retired-20261120T085819Z\`.) **Fresh setups**: the old Azure data is in R2 (`nextidp` `6cbb9b6a`, `nextdp_core` `468f8e88`, `nextlocal` `807188cf`) if it is ever needed.
 
-**Firewall:** `ufw` active (22/80/443), `fail2ban` active. Ports 8080/8090/8092 listen on all interfaces but are **not** reachable from outside (checked).
+**How new domains switch on (no per-domain Caddy config):** Caddy's global on-demand TLS asks the multiplexer `:8099`, which asks Next iDP `/_edge/ask` (master host, realm issuer hosts) and NextDP Core `/internal/tls/ask` (`core.nextdp.com` + active brands' admin/console hosts from the `brands` table). The `https://` catch-all sends traffic to Next iDP first; Next iDP answers **421** for hosts it does not own and Caddy hands them to NextDP Core. Brands created in the core.nextdp.com UI refresh NextDP Core's host cache at once; a brand created by script needs a `nextdp` restart (the `13-setup-nextdp-brand` script does it). Check anytime: `scripts/apps-core-vm/audit-domains.sh`.
 
-**Secrets (paths):** `/root/.apps-core-secrets.env`, `/root/.nextidp-admin-secrets.env`, `/root/.nextidp-cconsole-dns.env`, `/root/.nextdp-core-admin-secrets.env`, `/root/.nextdp-core-idp.env`, `/root/.nextdp-brand-idp.env`, `/srv/apps/nextdp/shared/.env`, `/srv/apps/localcen/shared/.env`, Next iDP env under `/opt/nextidp`. PC copies (pulled by `scripts/apps-core-vm/pull-*.ps1`): `private-data/aws-vm-nextidp.env`, `aws-vm-nextdp-core.env`, `nextidp-admin.env`, `nextdp-core-admin.env`, `*-realm.env`, `nextidp-accounts.txt`, `nextdp-core-accounts.txt`, `nextidp-s3.env`.
+**Firewall:** `ufw` active (22/80/443), `fail2ban` active. Ports 8080/8090 listen on all interfaces but are **not** reachable from outside (checked).
+
+**Secrets (paths):** `/root/.apps-core-secrets.env`, `/root/.nextidp-admin-secrets.env`, `/root/.nextidp-cconsole-dns.env`, `/root/.nextdp-core-admin-secrets.env`, `/root/.nextdp-core-idp.env`, `/root/.nextdp-brand-idp.env`, `/srv/apps/nextdp/shared/.env`, Next iDP env `/etc/nextidp/env`. PC copies (pulled by `scripts/apps-core-vm/pull-*.ps1`): `private-data/aws-vm-nextidp.env`, `aws-vm-nextdp-core.env`, `nextidp-admin.env`, `nextdp-core-admin.env`, `*-realm.env`, `nextidp-accounts.txt`, `nextdp-core-accounts.txt`, `nextidp-s3.env`.
 
 **Backups:** ❌ **none yet** (see section 8).
 
-**Scripts / docs:** `scripts/apps-core-vm/01`–`11`, `pull-*`, [`realm-nextdp-core.md`](realm-nextdp-core.md), [`realm-ndp-nextdp.md`](realm-ndp-nextdp.md). Repos: `projects/platform/nextidp` (`raiworks/nextidp`), `projects/platform/nextdp-core` (`rajeshyukta/nextdp`), `projects/platform/localcen` (`raiworks/localcen`).
+**Realms (Next iDP) / brands (NextDP Core) 2026-11-20:** realms `nextdp-core` (`id.nextdp.com`), `ndp-nextdp` (`accounts.nextdp.com`), `cconsole` (`accounts.cconsole.com`), all `live`. Brand `nextdp` (`admin/console.nextdp.com`), `idp_status = pending` (needs Re-check in core.nextdp.com). No `localcen` brand yet.
+
+**Scripts / docs:** `scripts/apps-core-vm/01`–`14` (`05-deploy-localcen` is obsolete; `14-remove-localcen` removed it), `pull-*`, `audit-domains.sh`, [`realm-nextdp-core.md`](realm-nextdp-core.md), [`realm-ndp-nextdp.md`](realm-ndp-nextdp.md). Repos: `projects/platform/nextidp` (`raiworks/nextidp`), `projects/platform/nextdp-core` (`rajeshyukta/nextdp`).
 
 ---
 
@@ -109,12 +113,12 @@ Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskche
 
 Dedicated VM for LocalCen, so it can be resized with sales without touching Next iDP / NextDP Core. NextBuilder (website builder) will join later. Security group `sg-00637efb7a2d3b0d2`: tcp 22/80/443 + udp 443. Inside: `ufw` (same ports) + `fail2ban`.
 
-**Status 2026-11-20:** **live** for `localcen.cconsole.com` and `admin.localcen.cconsole.com` (DNS switched by owner, Let's Encrypt certs, 200 from the internet, API 401 without login as expected). `console.localcen.com` and `admin.localcen.com` are explicit **LocalCen console aliases** (not NextDP Core brands: no row in `nextdp_core` or `nextidp` mentions `localcen.com`). They still point to Apps-Core-VM, which runs the **old LocalCen copy** until they move.
+**Status 2026-11-20:** **live** for `localcen.cconsole.com` and `admin.localcen.cconsole.com` (DNS switched by owner, Let's Encrypt certs, 200 from the internet, API 401 without login as expected). `console.localcen.com` and `admin.localcen.com` are **not** LocalCen hosts: they are the NextDP Core **brand** hosts of the LocalCen brand (end clients buy LocalCen through NextDP Core brands) and stay on Apps-Core-VM. The old LocalCen install on Apps-Core-VM was removed the same day.
 
 | Item | Value |
 |---|---|
 | App | `/srv/apps/localcen/{releases,current,shared}`, user `webapps`, units `localcen`, `localcen-worker`, timer `localcen-cleanup` (03:45 UTC). Port `8092` (kept from Apps-Core) |
-| Hostnames | `localcen.cconsole.com`, `console.localcen.com` (tenant console), `admin.localcen.cconsole.com`, `admin.localcen.com` (admin console), plus **every customer domain** through the `https://` catch-all with **on-demand TLS**. The ask goes to LocalCen `/internal/tls-allow`, so no per-domain config is needed. Customer DNS is checked by LocalCen against `LOCAL_HOST_SERVER_IPS=3.111.132.3` |
+| Hostnames | `localcen.cconsole.com` (tenant console: tenants create API keys), `admin.localcen.cconsole.com` (platform admin), plus **every customer domain** through the `https://` catch-all with **on-demand TLS**. The ask goes to LocalCen `/internal/tls-allow`, so no per-domain config is needed. Customer DNS is checked by LocalCen against `LOCAL_HOST_SERVER_IPS=3.111.132.3` |
 | Caddy | `templates/Caddyfile.localcen-1-vm` (dedicated mode from `localcen/deploy/caddy/Caddyfile`). There is no shared-Caddy member sync, so `CADDY_SYNC_SPOOL` was removed from `.env` |
 | Database | PostgreSQL 16.15 local: `localcen_db` (owner `localcen_u`), copied from Apps-Core-VM 2026-11-20 (46 tables, 54 migrations, 3 disabled shared domains `gramam.in`, `pattanam.in`, `constituency.in`, 0 tenants). No Redis (LocalCen uses the DB for sessions/queue and in-memory cache) |
 | Secrets (paths) | `/root/.localcen-1-secrets.env` (DB password), `/srv/apps/localcen/shared/.env` (copied from Apps-Core; DB password and server IP changed) |
@@ -153,7 +157,9 @@ Dedicated VM for LocalCen, so it can be resized with sales without touching Next
 | Name | → | VM |
 |---|---|---|
 | `mx.nextdp.com`, `mail.nextdp.com`, `dithim.com` | 52.66.111.138 | Mail VM |
-| `core.nextdp.com`, `accounts.nextdp.com`, `nextidp.com`, `console.localcen.com` | 43.204.42.99 | Apps-Core-VM |
+| `core.nextdp.com`, `id.nextdp.com`, `accounts.nextdp.com`, `accounts.cconsole.com`, `nextidp.com`, `admin/console.nextdp.com`, `admin/console.localcen.com` | 43.204.42.99 | Apps-Core-VM |
+| `localcen.cconsole.com`, `admin.localcen.cconsole.com` (+ future customer domains) | 3.111.132.3 | LocalCen-1-VM |
+| `accounts.localcen.com` | 20.235.94.100 (**old Azure**, must move to 43.204.42.99) | — |
 | `localcen.com`, `hub.cconsole.com` (+ `api/admin/docs/sandbox.hub`) | 3.6.143.66 | Web-1 |
 | `ns1.nextdp.com`, `dns.cconsole.com` | 52.66.165.1 | DNS VM |
 | `ns2.nextdp.com` | 52.66.25.51 | DNS VM |
@@ -171,7 +177,7 @@ Mail VM's CoreDNS (wildcard fallback answering `A`→Mail VM, `MX`→`mx.nextdp.
 | Web-1 | ✅ | `aws-web-1/` (id `f7fa98a985`) | 02:45 IST nightly | Sun 04:30 IST, `domains_rajesh` | `private-data/web-1-offsite-backup.env` |
 | Apps-Core-VM | ❌ | — | — | — | — |
 | DNS VM | ❌ | — | — | — | — |
-| LocalCen-1-VM | ❌ (before first customer) | planned `aws-sites-1/` → `aws-localcen-1/` | — | — | — |
+| LocalCen-1-VM | ❌ (before first customer) | planned `aws-localcen-1/` | — | — | — |
 
 - Same tool on both (`/usr/local/sbin/nextdp-offsite-backup`, source `templates/backup/nextdp-offsite-backup.sh`, per-VM `backup.conf`). It dumps **every** DB on the VM, makes safe SQLite copies, backs up files and configs, keeps 14 daily / 8 weekly / 12 monthly, and mails `rajesh@nextdp.com` on failure. Web-1 mails through the Mail VM's private IP `172.26.3.188:25`.
 - **Old NMC/Azure backups** (read-only reference): R2 `nxtmngr-test/prod-main/`, 698 snapshots, latest per DB on 16–18 Nov (full table in [`session-handover-2026-11-19.md`](session-handover-2026-11-19.md) section 3). Unlocking needs `JWT_SECRET` (`private-data/nmc-main-env.txt`) plus the NMC DB on the Mail VM `:5433`. Do not write to `prod-main/`.
@@ -196,7 +202,7 @@ Mail VM's CoreDNS (wildcard fallback answering `A`→Mail VM, `MX`→`mx.nextdp.
 
 ## 10. Known risks and suggested fixes (priority order)
 
-1. **No backup for Apps-Core-VM and DNS VM.** They hold the new IdP, NextDP Core, LocalCen and all PowerDNS zones. Fix: same backup tool, repos `aws-apps-core/` and `aws-dns-vm/` (about 10 min each).
+1. **No backup for Apps-Core-VM, DNS VM and LocalCen-1-VM.** They hold the IdP, NextDP Core, LocalCen and all PowerDNS zones. Fix: same backup tool, repos `aws-apps-core/` and `aws-dns-vm/` (about 10 min each).
 2. **Secrets only on one PC** (SSH key, backup passwords). Fix: password manager + offline copy + laptop (section 9).
 3. ~~Mail VM exposed `:8080`~~ **Fixed 2026-11-20**: the Lightsail firewall now allows only the mail/web ports. Still open: `fail2ban` is off on the Mail VM (SSH and SMTP AUTH brute force), and SSH (22) is open to any IP on all VMs.
 4. **ns1 and ns2 are the same VM.** If the DNS VM is down, every zone on it stops resolving. Fix: a second small VM in another AZ (or a secondary DNS provider via AXFR) for ns2.
