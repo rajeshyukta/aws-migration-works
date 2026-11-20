@@ -84,5 +84,7 @@ They still hold data not imported yet that may be needed (NextDP Core customer p
 | Apps-Core-VM | `nextdp_core_r2` | R2 `468f8e88` |
 | DNS VM | `dns_service_r2` | R2 `a143e215` |
 | DNS VM | `pdns_azure` | Azure disk `nmc-dns-1-osdisk`, 2026-11-18 10:50 IST |
+| Apps-Core-VM | `nextlocal_r2` | R2 `807188cf` (2026-11-08 10:20 IST, old LocalCen DB before the rename; 2 test tenants, 2 locals). Staged 2026-11-20 for the LocalCen integration plan |
+| Apps-Core-VM | `nextidp_r2` | R2 `6cbb9b6a` (2026-11-18 10:25 IST, old Next iDP: realms `localcen-old`, `localcen-people`, `cconsole` apps). Staged 2026-11-20 for the LocalCen integration plan |
 
 `.\scripts\r2\stage-r2-db.ps1 -Vm "<VM>" -Database <db> -TargetDb <name> -Drop`. The apps don't use these copies.
