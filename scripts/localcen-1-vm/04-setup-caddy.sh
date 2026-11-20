@@ -9,7 +9,7 @@ MODE="${MODE:?validate|apply}"
 STAGE_DIR="${STAGE_DIR:?}"
 SRC="$STAGE_DIR/Caddyfile"
 PUBLIC_IP=3.111.132.3
-HOSTS="localcen.cconsole.com admin.localcen.cconsole.com console.localcen.com admin.localcen.com"
+HOSTS="${HOSTS:-localcen.cconsole.com admin.localcen.cconsole.com console.localcen.com admin.localcen.com}"
 trap 'rm -rf "$STAGE_DIR"' EXIT
 cd /tmp
 for f in admin-localcen.access.log localcen.access.log public-localcen.access.log; do
@@ -46,9 +46,9 @@ for h in $HOSTS; do
   ok=no
   for i in $(seq 1 36); do curl -sS -o /dev/null --max-time 8 --resolve "$h:443:127.0.0.1" "https://$h/" 2>/dev/null && { ok=yes; break; }; sleep 5; done
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve "$h:443:127.0.0.1" "https://$h/")
-  api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve "$h:443:127.0.0.1" "https://$h/v1/health" )
+  api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve "$h:443:127.0.0.1" "https://$h/v1/me")
   issuer=$(echo | openssl s_client -connect 127.0.0.1:443 -servername "$h" 2>/dev/null | openssl x509 -noout -issuer 2>/dev/null | sed 's/^issuer=//')
-  printf '  %-30s tls=%-3s /=%s /v1/health=%s issuer=%s\n' "$h" "$ok" "$code" "$api" "${issuer:-none}"
+  printf '  %-30s tls=%-3s /=%s /v1/me=%s issuer=%s\n' "$h" "$ok" "$code" "$api" "${issuer:-none}"
 done
 echo "  unknown host (must get no cert): $(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --resolve not-a-customer.example.org:443:127.0.0.1 https://not-a-customer.example.org/ 2>/dev/null || echo refused)"
 echo "APPLY_DONE"

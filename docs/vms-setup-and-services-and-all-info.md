@@ -15,7 +15,7 @@ One place to look up what runs where on the AWS servers that replaced the Azure/
 | **Mail VM** | `52.66.111.138` | Lightsail `NextDP-Mail-VM` (private `172.26.3.188`) | t3.small: 2 vCPU, 1.9 GB RAM + 2 GB swap, 58 GB disk (13% used) | ap-south-1a | NextDP Mail (SMTP/IMAP/POP3 + 3 web consoles), dithim.com, catch-all maintenance page |
 | **Web-1** | `3.6.143.66` | Lightsail (private `172.26.9.186`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 58 GB (11%) | ap-south-1a | PHP 8.4 + static sites (OGCEN, domains app, CConsole Hub, ~35 domains) |
 | **Apps-Core-VM** | `43.204.42.99` | EC2 `i-0eee8167ad7ff9be0` (private `172.31.2.129`) | t3.large: 2 vCPU, 7.8 GB + 2 GB swap, 48 GB (11%) | ap-south-1b | Next iDP (`accounts.<brand>`), NextDP Core, LocalCen |
-| **LocalCen-1-VM** | `3.111.132.3` (Elastic IP) | EC2 `i-007e720a8c578aad7` (private `172.31.8.71`) | t2.medium: 2 vCPU, 3.9 GB + 2 GB swap, 48 GB gp3 | ap-south-1b | LocalCen (dedicated, customer domains via on-demand TLS); NextBuilder later. **Added 2026-11-20, move in progress** (section 5b) |
+| **LocalCen-1-VM** | `3.111.132.3` (Elastic IP) | EC2 `i-007e720a8c578aad7` (private `172.31.8.71`) | t2.medium: 2 vCPU, 3.9 GB + 2 GB swap, 48 GB gp3 | ap-south-1b | LocalCen (dedicated, customer domains via on-demand TLS); NextBuilder later. **Live since 2026-11-20** for the cconsole.com hosts (section 5b) |
 | **DNS VM** | `52.66.165.1` (**ns1**) + `52.66.25.51` (**ns2**) | EC2 `i-0fe9b807d4d2fad7d` (2 private IPs `172.31.14.174`, `172.31.11.141`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 29 GB (17%) | ap-south-1b | PowerDNS authoritative `ns1/ns2.nextdp.com` + dns-service UI/API |
 
 All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), Caddy v2.11.9 (automatic HTTPS), Amazon SSM agent.
@@ -110,7 +110,7 @@ Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskche
 
 Dedicated VM for LocalCen, so it can be resized with sales without touching Next iDP / NextDP Core. NextBuilder (website builder) will join later. Security group `sg-00637efb7a2d3b0d2`: tcp 22/80/443 + udp 443. Inside: `ufw` (same ports) + `fail2ban`.
 
-**Status 2026-11-20:** base setup, data copy and app deploy done; LocalCen runs and is healthy on `127.0.0.1:8092`. **Not public yet**: the 4 console hostnames still point to Apps-Core-VM until the DNS switch, and Caddy serves only a placeholder until `04-setup-caddy.ps1 -Apply`.
+**Status 2026-11-20:** **live** for `localcen.cconsole.com` and `admin.localcen.cconsole.com` (DNS switched by owner, Let's Encrypt certs, 200 from the internet, API 401 without login as expected). `console.localcen.com` and `admin.localcen.com` are explicit **LocalCen console aliases** (not NextDP Core brands: no row in `nextdp_core` or `nextidp` mentions `localcen.com`). They still point to Apps-Core-VM, which runs the **old LocalCen copy** until they move.
 
 | Item | Value |
 |---|---|
