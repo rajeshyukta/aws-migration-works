@@ -19,6 +19,20 @@ VM reference (what runs where, risks): [`vms-setup-and-services-and-all-info.md`
 - [ ] **Later: AWS root user.** The CLI is logged in as the account root. Create an IAM user/role for daily Lightsail/EC2 work, enable MFA on root.
 - [ ] **Later: SSH hardening.** SSH (22) is open to any IP on all VMs. Consider restricting it to the owner's IPs, or using Lightsail/SSM browser access. Enable `fail2ban` on the Mail VM (it is the only VM without it).
 
+## LocalCen sales launch + new "Sites" VM (decided 2026-11-20)
+
+LocalCen starts selling within ~3 days. LocalCen and later NextBuilder (website builder, Go backend + React) move to their own EC2 VM so it can grow with customer traffic and customer domains. Next iDP + NextDP Core stay on Apps-Core-VM, which then gets smaller.
+
+- [ ] **Owner: create the EC2 VM** (`ap-south-1`): Ubuntu 24.04 x86_64, **t3.medium** (2 vCPU, 4 GB), gp3 **40 GB**, name `Sites-1`, key pair `dithim-aws`. Security group: tcp 22, 80, 443 + udp 443 only. Attach an **Elastic IP**: reuse an unattached one (`3.111.132.3` or `65.0.216.106`). Customer domains point at this IP, so it must never change. Then add a `Sites-1` block to `private-data/vms-details.txt`.
+- [ ] **Agent: base setup on Sites-1** like `scripts/apps-core-vm/01-02` (PostgreSQL 16, Redis, Caddy, ufw, fail2ban, swap, disk check), with Caddy **on-demand TLS** guarded by an ask endpoint. No per-domain Caddy config is needed for 100s of customer domains: LocalCen already answers `/internal/tls-allow?domain=`. Rate limit: Let's Encrypt allows 300 new orders per 3 h per account, and Caddy falls back to ZeroSSL.
+- [ ] **Agent: move LocalCen** from Apps-Core-VM to Sites-1 (fresh deploy of `/srv/apps/localcen` + `pg_dump`/`pg_restore` of `localcen_db` + `shared/` files). Then repoint DNS: `localcen.cconsole.com`, `console.localcen.com`, `admin.localcen.cconsole.com`, `admin.localcen.com` (Cloudflare zone for `localcen.com`, PowerDNS for `cconsole.com`). Lower the TTL to 300 a day before. Then remove LocalCen units, timers, Caddy routes and the tls-ask entry from Apps-Core-VM.
+- [ ] **Decide the customer-domain instruction before the first sale.** Tell customers to point `www.<theirdomain>` as a **CNAME** to a hostname we control (e.g. `sites.localcen.com` → Sites-1 IP) and redirect the apex. Then a later move (Linode) only changes our one record. Customers who use an apex **A record** must change it themselves on every move.
+- [ ] **Off-site backup for Sites-1** from day 1 (repo `aws-sites-1/`, restore test `localcen_db`). LocalCen holds paying customers' data.
+- [ ] **Later: NextBuilder on Sites-1** (own port, own DB, its own tls-ask entry).
+- [ ] **Later: shrink Apps-Core-VM** (`i-0eee8167ad7ff9be0`, AWS name `LocalCen-Core`) from t3.large to **t3.small** (2 GB) once LocalCen is gone. On 2026-11-20 it used 868 MB in total with load 0.00. It has an Elastic IP (`43.204.42.99`), so the stop/resize/start keeps the IP. Expect ~2 min downtime for `core.nextdp.com` and all `accounts.<brand>` sign-ins.
+- [ ] **Later: release unused Elastic IPs**: after Sites-1 takes one, release the other (an unattached EIP is billed hourly).
+- [ ] **Later: Linode migration** (when funds are in). Per VM: build the Linode, copy app + data, test via the hosts file, short write freeze, final dump/restore, switch DNS (TTL 300 a day before), keep the AWS VM stopped 2–3 days as fallback, then delete it. Do not run the databases on Linode with the web apps still on AWS: that means slow cross-cloud DB traffic, a public PostgreSQL, and a split-brain risk. Ask Linode support to open outbound mail ports (closed on new accounts); our sending goes through ZeptoMail's API, so it is not blocked. Before deciding, check the real AWS data-transfer cost on the bill: Lightsail plans include a monthly transfer allowance, and EC2 transfer is billed per GB.
+
 ## Mail VM (`52.66.111.138`)
 
 - [x] **Lightsail firewall: only required ports** (done 2026-11-20, `scripts/mail-vm/18-lightsail-firewall.ps1`): tcp 22/25/80/443/465/587/143/993/110/995 + udp 443. 53 and 8080 are closed. Web-1 alerts and all web consoles verified.
