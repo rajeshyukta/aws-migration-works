@@ -37,7 +37,7 @@
 	}
 }
 
-admin.localcen.cconsole.com, admin.localcen.com {
+admin.localcen.cconsole.com {
 	import lc_console
 	handle {
 		root * /srv/apps/localcen/current/consoles/admin
@@ -49,7 +49,7 @@ admin.localcen.cconsole.com, admin.localcen.com {
 	}
 }
 
-localcen.cconsole.com, console.localcen.com {
+localcen.cconsole.com {
 	import lc_console
 	handle {
 		root * /srv/apps/localcen/current/consoles/tenant

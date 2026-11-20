@@ -9,7 +9,7 @@ MODE="${MODE:?validate|apply}"
 STAGE_DIR="${STAGE_DIR:?}"
 SRC="$STAGE_DIR/Caddyfile"
 PUBLIC_IP=3.111.132.3
-HOSTS="${HOSTS:-localcen.cconsole.com admin.localcen.cconsole.com console.localcen.com admin.localcen.com}"
+HOSTS="${HOSTS:-localcen.cconsole.com admin.localcen.cconsole.com}"
 trap 'rm -rf "$STAGE_DIR"' EXIT
 cd /tmp
 for f in admin-localcen.access.log localcen.access.log public-localcen.access.log; do

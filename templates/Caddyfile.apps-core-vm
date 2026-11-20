@@ -55,7 +55,7 @@ https://core.nextdp.com {
 }
 
 # ── LocalCen consoles (:8092) ─────────────────────────────────────────────
-https://admin.localcen.cconsole.com, https://admin.localcen.com {
+https://admin.localcen.cconsole.com {
     encode gzip
     handle /v1/* {
         reverse_proxy 127.0.0.1:8092
@@ -76,7 +76,7 @@ https://admin.localcen.cconsole.com, https://admin.localcen.com {
     }
 }
 
-https://localcen.cconsole.com, https://console.localcen.com {
+https://localcen.cconsole.com {
     encode gzip
     handle /v1/* {
         reverse_proxy 127.0.0.1:8092
