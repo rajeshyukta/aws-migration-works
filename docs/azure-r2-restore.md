@@ -17,6 +17,8 @@ Reusable scripts for bringing old Azure data onto the AWS VMs **next to** the li
 | **Brand domains:** old brand `nextdigital` → live brand `nextdp` (`34831870-c4c1-4d8b-bd45-b77672b541d3`) | **Done.** 55 domains as external domains (44 external + 11 registered, all `verified`, `managed-dns`), 54 managed-DNS zone rows, original ids kept. **All owned by `rajesh@nextdp.com` (public id `xcztbuqqh`).** No users created (3 copied by the first run were deleted again on the owner's request) |
 | **DNS zones:** old account `nextdp` → live tenant `nextdp` (`01a1f019-22db-7b69-9787-ba6220281859`) | **Done.** 61 zones created, 234 record sets added, 150 records `20.207.200.1` → `3.6.143.66`, 14 live zones linked to their NextDP Core zone id, Google MX put back on `daiskills.com` and `srikalabhairavam.com`. Backup before import: `/var/backups/dns-vm/pre-azure-import-20261120T114625Z/` + `D:\nmc-backup\dns-vm\pre-azure-import-20261120T114625Z\`. Re-run of the dry run: nothing left to add |
 | **Brand DNS connection** (NextDP Core brand `nextdp` ↔ dns-service tenant `nextdp`) | **Done.** Base URL `https://dns.cconsole.com`, NS `ns1/ns2.nextdp.com`, API key sealed (core "Test connection" OK). Webhook `https://console.nextdp.com/webhooks/dns`: secret set by the owner in the consoles, test ping **delivered (HTTP 200)** |
+| **All other old brands → live brand `nextdp`** (owner: one brand for now, new brands later) | **Done.** `presencive` 18 (3 already there), `leadyourbiz` 1, old `nextdp` 2, `dpm` 1, `proseva` 1 → brand `nextdp` has **78 external domains + 69 zone rows**, all owned by `xcztbuqqh` |
+| **Other DNS accounts → live tenant `nextdp`** (`presencive`, `proseva`, `leadyourbiz`, `yourdpm`, `savadhan`, run with `-KeyAccount nextdp`) | **Done.** 16 zones created, 51 record sets, same drop/rewrite rules, no Cloudflare zones among them. Tenant `nextdp` serves **100 zones**. Backup before: `/var/backups/dns-vm/pre-azure-import2-20261120T125538Z/`. **11 of these zones are delegated to old brand NS names (`ns1/ns2.presencive.com`, `.leadyourbiz.com`, `.yourdpm.com`, `.proseva.org`) that still point to dead Azure IPs**, so they do not resolve until the owner changes their NS (TODO 1.0) |
 | **Apps-Core Caddy catch-all fix** | **Done.** Every POST with a body on brand hosts (`admin/console.<brand>`) returned 502 (the Next iDP hop consumed the body before the 421 fallthrough). Now a router decides per host first. Backup `/var/backups/caddy/pre-routing-fix-20261120T120834Z/` |
 
 ### Import rules used (owner decisions 2026-11-20)
@@ -60,15 +62,19 @@ cd E:\workspace\aws-setup-and-migrations
 .\scripts\r2\make-domain-docs.ps1
 ```
 
-## 4. Next brand (same pattern)
+## 4. Moving domains to a new brand later (same pattern)
+
+All old brands are in the live brand `nextdp` now. When a new brand is created, its domains move from `nextdp` to it (a small script: update `users`/`brand_id` of the zone rows and the owner of the external domains; not written yet). For a fresh import from the staged copies instead:
 
 1. Owner picks the old brand, the live brand (create it first if needed) and the **one** owner account (public id).
 2. `15-import-r2-brand-domains.ps1` dry run → owner checks → `-Commit`.
-3. DNS: old account in `pdns_azure` (`presencive`, `proseva`, `leadyourbiz`, `yourdpm`, `savadhan`) → live tenant. Create the live tenant first if needed. Dry run `09-import-azure-zones.ps1 -Account <acct> -TenantId <id> -CoreBrandId <id>`, owner checks drops/rewrites, `-Commit`. The script reads the tenant key from `/root/.dns-<account>-secrets.env` on the DNS VM.
+3. DNS: old account in `pdns_azure` → live tenant. Create the live tenant first if needed. Dry run `09-import-azure-zones.ps1 -Account <acct> -KeyAccount <target tenant> -TenantId <id> -CoreBrandId <id>`, owner checks drops/rewrites, `-Commit`. The script reads the tenant key from `/root/.dns-<account>-secrets.env` on the DNS VM.
 4. Brand DNS connection: `16-setup-brand-dns-connection.ps1 -BrandId <id> -KeyFile <file> -NoWebhook`, then the webhook in the consoles: dns.cconsole.com → Webhook: URL `https://console.<brand host>/webhooks/dns`, rotate the secret → core.nextdp.com → Brands → `<brand>` → DNS → paste the secret → Test ping.
 5. Rebuild the inventories (`make-domain-docs.ps1`), update this file, the VM reference doc and TODO.
 
-## 5. Staged copies (drop when all brands are done)
+## 5. Staged copies (keep for now: owner, 2026-11-20)
+
+They still hold data not imported yet that may be needed (NextDP Core customer profiles, domain contacts, orders, sites, templates; old DNS tenants). Delete only on the owner's go.
 
 | VM | DB | From |
 |---|---|---|

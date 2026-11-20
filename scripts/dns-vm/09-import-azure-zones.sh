@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Runs on the DNS VM. Imports the zones of one old Azure PowerDNS account (pdns_azure, exported from
 # the nmc-dns-1 disk) into a LIVE dns-service tenant through the dns-service API (127.0.0.1:8080,
-# tenant API key from /root/.dns-<account>-secrets.env, never printed).
+# tenant API key from /root/.dns-<KEY_ACCOUNT>-secrets.env, never printed; KEY_ACCOUNT defaults to ACCOUNT,
+# set it to the TARGET tenant when an old account is merged into another tenant).
 #
 # Rules (owner decisions 2026-11-20):
 #   - new zone: claim it (ref = NextDP Core dns_zones.id when known), then write every old record set
@@ -16,12 +17,12 @@ exec 2>&1
 
 export OLD_DB="${OLD_DB:-pdns_azure}" ACCOUNT="${ACCOUNT:-nextdp}" TENANT_ID="${TENANT_ID:?TENANT_ID required}"
 export SKIP_ZONES="${SKIP_ZONES:-}" DROP_IPS="${DROP_IPS:-}" DROP_HOSTS="${DROP_HOSTS:-}" IP_MAP="${IP_MAP:-}"
-export DROP_IDP="${DROP_IDP:-1}" RESTORE_GOOGLE_MX="${RESTORE_GOOGLE_MX:-1}" REFS_FILE="${REFS_FILE:-}"
+export KEY_ACCOUNT="${KEY_ACCOUNT:-$ACCOUNT}" DROP_IDP="${DROP_IDP:-1}" RESTORE_GOOGLE_MX="${RESTORE_GOOGLE_MX:-1}" REFS_FILE="${REFS_FILE:-}"
 export DRY_RUN="${DRY_RUN:-1}" PLAN_TSV="${PLAN_TSV:-}"
-[[ "$OLD_DB" =~ ^[a-z][a-z0-9_]*$ && "$ACCOUNT" =~ ^[a-z0-9-]+$ ]] || { echo "FATAL: invalid OLD_DB/ACCOUNT"; exit 1; }
+[[ "$OLD_DB" =~ ^[a-z][a-z0-9_]*$ && "$ACCOUNT" =~ ^[a-z0-9-]+$ && "$KEY_ACCOUNT" =~ ^[a-z0-9-]+$ ]] || { echo "FATAL: invalid OLD_DB/ACCOUNT"; exit 1; }
 [[ "$TENANT_ID" =~ ^[0-9a-f-]{36}$ ]] || { echo "FATAL: invalid TENANT_ID"; exit 1; }
 [[ -z "$PLAN_TSV" || "$PLAN_TSV" == /tmp/dns-import-*.tsv ]] || { echo "FATAL: PLAN_TSV must be /tmp/dns-import-*.tsv"; exit 1; }
-SECRETS="/root/.dns-${ACCOUNT}-secrets.env"
+SECRETS="/root/.dns-${KEY_ACCOUNT}-secrets.env"
 sudo test -f "$SECRETS" || { echo "FATAL: $SECRETS missing"; exit 1; }
 cd /tmp
 
@@ -43,7 +44,7 @@ if E.get("REFS_FILE") and os.path.exists(E["REFS_FILE"]):
             refs[f.lower()] = r
 
 key = ""
-for line in open(f"/root/.dns-{E['ACCOUNT']}-secrets.env"):
+for line in open(f"/root/.dns-{E['KEY_ACCOUNT']}-secrets.env"):
     if line.startswith("NEXTDP_API_KEY=") or line.startswith("API_KEY="):
         key = line.split("=", 1)[1].strip().strip('"')
 if not key:

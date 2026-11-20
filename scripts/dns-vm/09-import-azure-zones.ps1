@@ -7,6 +7,7 @@
 # The plan (one line per record set) is saved to temp/dns-import-<account>.tsv.
 param(
     [string]$Account = "nextdp",
+    [string]$KeyAccount = "",   # tenant whose API key is used (= target tenant); default: same as -Account
     [string]$TenantId = "01a1f019-22db-7b69-9787-ba6220281859",
     [string]$CoreBrandId = "34831870-c4c1-4d8b-bd45-b77672b541d3",
     [string[]]$SkipZones = @("rajesh1.com"),
@@ -28,7 +29,8 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
-if ($Account -notmatch '^[a-z0-9-]+$' -or $TenantId -notmatch '^[0-9a-f-]{36}$' -or $CoreBrandId -notmatch '^[0-9a-f-]{36}$') { throw "Invalid account/tenant/brand id" }
+if (-not $KeyAccount) { $KeyAccount = $Account }
+if ($KeyAccount -notmatch '^[a-z0-9-]+$' -or $Account -notmatch '^[a-z0-9-]+$' -or $TenantId -notmatch '^[0-9a-f-]{36}$' -or $CoreBrandId -notmatch '^[0-9a-f-]{36}$') { throw "Invalid account/tenant/brand id" }
 foreach ($v in @($SkipZones + $DropHosts)) { if ($v -notmatch '^[a-z0-9.*-]+$') { throw "Invalid name: $v" } }
 foreach ($v in $DropIps) { if ($v -notmatch '^[0-9a-f.:]+$') { throw "Invalid IP: $v" } }
 foreach ($v in $IpMap) { if ($v -notmatch '^[0-9a-f.:]+=[0-9a-f.:]+$') { throw "Invalid -IpMap entry: $v" } }
@@ -58,7 +60,7 @@ $remoteScript = "/tmp/dns-import-$PID.sh"
 if ($LASTEXITCODE -ne 0) { throw "upload failed" }
 $dry = if ($Commit) { "0" } else { "1" }
 $google = if ($KeepLiveGoogleMx) { "0" } else { "1" }
-$envs = "ACCOUNT=$Account TENANT_ID=$TenantId REFS_FILE=$remoteRefs PLAN_TSV=$remotePlan DRY_RUN=$dry RESTORE_GOOGLE_MX=$google " +
+$envs = "ACCOUNT=$Account KEY_ACCOUNT=$KeyAccount TENANT_ID=$TenantId REFS_FILE=$remoteRefs PLAN_TSV=$remotePlan DRY_RUN=$dry RESTORE_GOOGLE_MX=$google " +
         "SKIP_ZONES='$($SkipZones -join ' ')' DROP_IPS='$($DropIps -join ' ')' DROP_HOSTS='$($DropHosts -join ' ')' IP_MAP='$($IpMap -join ' ')'"
 try {
     & ssh -n -i $dns.SshKey @o $dns.Target "sed -i 's/\r$//' $remoteScript && $envs bash $remoteScript > /tmp/dns-import-$PID.log 2>&1; echo rc=`$? >> /tmp/dns-import-$PID.log"

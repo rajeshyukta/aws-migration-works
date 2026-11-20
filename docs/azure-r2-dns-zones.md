@@ -3,9 +3,9 @@
 **Generated file, do not edit by hand.** Rebuild with `scripts/r2/make-domain-docs.ps1` (see [`azure-r2-restore.md`](azure-r2-restore.md)).
 
 - **Source:** R2 snapshot a143e215 of dns_service from nmc-db-1 taken 2026-11-16T05:25:44.994200017Z. Staged read-only as `dns_service_r2` on the DNS VM.
-- **Exported:** 2026-11-20T12:16:22Z.
+- **Exported:** 2026-11-20T12:59:52Z.
 - **Totals in the backup:** 9 tenants, 108 zones (2 soft-deleted). Super admins: `admin@presencive.com`, `rajesh@cconsole.com`.
-- **AWS now:** live `dns_db` has tenants `presencive`, `nextdp` and 84 zones; PowerDNS (`pdns`) serves 84 zones.
+- **AWS now:** live `dns_db` has tenants `presencive`, `nextdp` and 100 zones; PowerDNS (`pdns`) serves 100 zones.
 - **Records are not in this backup.** dns-service keeps only the zone list and lifecycle; the records lived in the PowerDNS `pdns` database on the Azure DNS VMs (`nmc-dns-1/2`), which NMC did not back up to R2. A zone moved to AWS gets its records from the owner or from the brand's defaults.
 
 Zone status (dns-service): `active` = delegation to the tenant's nameservers confirmed; `awaiting_ns` = claimed, waiting for the NS change at the registrar; `detached` = was active, NS moved away; `expired` = 14 days without delegation.
@@ -30,19 +30,19 @@ Zone status (dns-service): `active` = delegation to the tenant's nameservers con
 
 | # | Zone | Status | Delegated | Claimed | Source | NextDP Core brand | On AWS now |
 |---|---|---|---|---|---|---|---|
-| 1 | `athomepg.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 2 | `bharatgetonline.com` | active | 2026-07-28 | 2026-07-28 | api | presencive | no |
-| 3 | `bhuvigeotech.co.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 4 | `halli.in` | active | 2026-10-28 | 2026-10-28 | api | presencive | no |
-| 5 | `hargharme.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 6 | `icfluence.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 7 | `pdnstest.presencive.com` | active | 2026-07-27 | 2026-07-27 | import | - | no |
-| 8 | `pureayurveda.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 9 | `rapidbot.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 10 | `srinivasulu.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 11 | `vayamhindu.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 12 | `rajesh.co.in` | detached | 2026-07-27 | 2026-07-27 | import | presencive | no |
-| 13 | `rajesh.in` | detached | 2026-07-27 | 2026-07-27 | import | presencive | no |
+| 1 | `athomepg.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 5 rec, A 3.6.143.66 |
+| 2 | `bharatgetonline.com` | active | 2026-07-28 | 2026-07-28 | api | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
+| 3 | `bhuvigeotech.co.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
+| 4 | `halli.in` | active | 2026-10-28 | 2026-10-28 | api | presencive | dns_db: nextdp awaiting_ns; pdns 8 rec, A 3.6.143.66 |
+| 5 | `hargharme.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 10 rec, A - |
+| 6 | `icfluence.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 11 rec, A 20.244.35.68 |
+| 7 | `pdnstest.presencive.com` | active | 2026-07-27 | 2026-07-27 | import | - | dns_db: nextdp awaiting_ns; pdns 4 rec, A - |
+| 8 | `pureayurveda.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 6 rec, A 3.6.143.66 |
+| 9 | `rapidbot.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 20 rec, A 3.6.143.66 |
+| 10 | `srinivasulu.in` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
+| 11 | `vayamhindu.com` | active | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
+| 12 | `rajesh.co.in` | detached | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
+| 13 | `rajesh.in` | detached | 2026-07-27 | 2026-07-27 | import | presencive | dns_db: nextdp awaiting_ns; pdns 3 rec, A - |
 | 14 | `f03-smoke-test.com` | awaiting_ns (deleted) | - | 2026-07-27 | api | - | no |
 | 15 | `f03-verify-10601.com` | awaiting_ns (deleted) | - | 2026-07-27 | api | - | no |
 
@@ -52,7 +52,7 @@ Zone status (dns-service): `active` = delegation to the tenant's nameservers con
 
 | # | Zone | Status | Delegated | Claimed | Source | NextDP Core brand | On AWS now |
 |---|---|---|---|---|---|---|---|
-| 1 | `savadhan.com` | active | 2026-07-27 | 2026-07-27 | api | - | no |
+| 1 | `savadhan.com` | active | 2026-07-27 | 2026-07-27 | api | - | dns_db: nextdp awaiting_ns; pdns 5 rec, A 3.6.143.66 |
 
 ## 3. Tenant `nextdp` (NextDP)
 
@@ -161,7 +161,7 @@ No zones.
 
 | # | Zone | Status | Delegated | Claimed | Source | NextDP Core brand | On AWS now |
 |---|---|---|---|---|---|---|---|
-| 1 | `leadyourbiz.in` | active | 2026-08-07 | 2026-08-07 | api | leadyourbiz | no |
+| 1 | `leadyourbiz.in` | active | 2026-08-07 | 2026-08-07 | api | leadyourbiz | dns_db: nextdp awaiting_ns; pdns 5 rec, A 3.6.143.66 |
 
 ## 6. Tenant `cloudtej` (CloudTej)
 
@@ -175,7 +175,7 @@ No zones.
 
 | # | Zone | Status | Delegated | Claimed | Source | NextDP Core brand | On AWS now |
 |---|---|---|---|---|---|---|---|
-| 1 | `whydpm.com` | active | 2026-08-28 | 2026-08-28 | api | dpm | no |
+| 1 | `whydpm.com` | active | 2026-08-28 | 2026-08-28 | api | dpm | dns_db: nextdp awaiting_ns; pdns 4 rec, A - |
 
 ## 8. Tenant `ogcen` (Organic Growth Center)
 
@@ -190,7 +190,7 @@ No zones.
 | # | Zone | Status | Delegated | Claimed | Source | NextDP Core brand | On AWS now |
 |---|---|---|---|---|---|---|---|
 | 1 | `haindaviswaraj.org.in` | active | 2026-09-27 | 2026-09-27 | api | proseva | dns_db: nextdp awaiting_ns; pdns 7 rec, A 3.6.143.66 |
-| 2 | `proseva.org` | detached | 2026-09-22 | 2026-08-07 | api | nextdigital, proseva (brand host) | dns_db: nextdp awaiting_ns; pdns 6 rec, A 3.6.143.66 |
+| 2 | `proseva.org` | detached | 2026-09-22 | 2026-08-07 | api | nextdigital, proseva (brand host) | dns_db: nextdp awaiting_ns; pdns 9 rec, A 3.6.143.66 |
 
 ## Zones on AWS that were not in the Azure dns-service
 

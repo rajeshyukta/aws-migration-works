@@ -3,8 +3,8 @@
 **Generated file, do not edit by hand.** Rebuild with `scripts/r2/make-domain-docs.ps1` (see [`azure-r2-restore.md`](azure-r2-restore.md)).
 
 - **Source:** R2 snapshot 468f8e88 of nextdp_core from nmc-db-1 taken 2026-11-18T03:15:41.274721536Z. Staged read-only as `nextdp_core_r2` on Apps-Core-VM.
-- **Exported:** 2026-11-20T12:16:18Z.
-- **AWS now:** live `nextdp_core` has 1 brand(s): `nextdp` (admin.nextdp.com, console.nextdp.com); 55 customer domains. The DNS VM serves 84 zones.
+- **Exported:** 2026-11-20T12:59:49Z.
+- **AWS now:** live `nextdp_core` has 1 brand(s): `nextdp` (admin.nextdp.com, console.nextdp.com); 78 customer domains. The DNS VM serves 100 zones.
 - **Totals in the backup:** 9 brands, 24 registered domains, 57 external domains, 70 DNS zones, 17 sites, 24 users.
 
 Columns in the per-brand tables:
@@ -19,14 +19,14 @@ Columns in the per-brand tables:
 
 | Brand | Name | Primary product | Hosts: primary / admin / console / accounts | Sign-in (iDP) | Users | Registered | External | Core DNS zones | Sites | On AWS now |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `presencive` | Presencive | domains | presencive.com / admin.presencive.com / console.presencive.com / accounts.presencive.com | live | 5 | 10 | 11 | 13 | 9 | no brand; 3/21 domains in live NextDP Core |
+| `presencive` | Presencive | domains | presencive.com / admin.presencive.com / console.presencive.com / accounts.presencive.com | live | 5 | 10 | 11 | 13 | 9 | no brand; 21/21 domains in live NextDP Core |
 | `nextdigital` | NextDigital | local | nextdigital.in / admin.nextdigital.in / console.nextdigital.in / accounts.nextdigital.in | live | 6 | 11 | 44 | 54 | 7 | no brand; 55/55 domains in live NextDP Core |
-| `leadyourbiz` | Lead Your Biz | domains | leadyourbiz.com / admin.leadyourbiz.com / console.leadyourbiz.com / accounts.leadyourbiz.com | none | 2 | 1 | 0 | 1 | 0 | no brand; 0/1 domains in live NextDP Core |
+| `leadyourbiz` | Lead Your Biz | domains | leadyourbiz.com / admin.leadyourbiz.com / console.leadyourbiz.com / accounts.leadyourbiz.com | none | 2 | 1 | 0 | 1 | 0 | no brand; 1/1 domains in live NextDP Core |
 | `digpre` | DigPre | domains | - / admin.digpre.com / console.digpre.com / accounts.digpre.com | none | 0 | 0 | 0 | 0 | 0 | no brand; 0/0 domains in live NextDP Core |
-| `nextdp` | Next Digital Platforms | domains | nextdp.com / admin.nextdp.com / console.nextdp.com / accounts.nextdp.com | none | 2 | 2 | 0 | 0 | 0 | brand exists; 0/2 domains in live NextDP Core |
-| `dpm` | YOUR DPM | domains | - / admin.yourdpm.com / yourdpm.com / accounts.yourdpm.com | none | 2 | 0 | 1 | 1 | 1 | no brand; 0/1 domains in live NextDP Core |
+| `nextdp` | Next Digital Platforms | domains | nextdp.com / admin.nextdp.com / console.nextdp.com / accounts.nextdp.com | none | 2 | 2 | 0 | 0 | 0 | brand exists; 2/2 domains in live NextDP Core |
+| `dpm` | YOUR DPM | domains | - / admin.yourdpm.com / yourdpm.com / accounts.yourdpm.com | none | 2 | 0 | 1 | 1 | 1 | no brand; 1/1 domains in live NextDP Core |
 | `ogcen` | Organic Growth Center | domains | organicgrowth.center / admin.ogcen.com / my.ogcen.com / accounts.ogcen.com | live | 2 | 0 | 0 | 0 | 0 | no brand; 0/0 domains in live NextDP Core |
-| `proseva` | ProSEVA | domains | proseva.org / admin.proseva.org / console.proseva.org / accounts.proseva.org | live | 2 | 0 | 1 | 1 | 0 | no brand; 0/1 domains in live NextDP Core |
+| `proseva` | ProSEVA | domains | proseva.org / admin.proseva.org / console.proseva.org / accounts.proseva.org | live | 2 | 0 | 1 | 1 | 0 | no brand; 1/1 domains in live NextDP Core |
 | `localcen` | LocalCen | domains | localcen.com / admin.localcen.com / console.localcen.com / accounts.localcen.com | live | 2 | 0 | 0 | 0 | 0 | no brand; 0/0 domains in live NextDP Core |
 
 ## Brand service connections (no secrets)
@@ -51,30 +51,30 @@ Columns in the per-brand tables:
 - Brand hosts: primary `presencive.com`, admin `admin.presencive.com`, console `console.presencive.com`, accounts (iDP) `accounts.presencive.com`
 - Sender: `admin@presencive.com`. Brand nameservers: `ns1.presencive.com ns2.presencive.com`.
 - Features on: blogs, dns, docs, domains, handcraft, idp_login, lms, local, store.
-- Users: 5. On AWS now: brand not created; 3 of 21 domains are in live NextDP Core (moved into a live brand as external domains).
+- Users: 5. On AWS now: brand not created; 21 of 21 domains are in live NextDP Core (moved into a live brand as external domains).
 
 | # | Domain | Registered | External | Core DNS zone | Azure dns-service | Sites | On AWS now | Owner |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `athomepg.in` | active, exp 2027-07-19, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | handcraft: athomepg.in (active, dns_ok) | no | guruvishnu609@gmail.com |
-| 2 | `bharatgetonline.com` | - | verified 2026-07-28 | active (external) | presencive: active | - | no | rajesh.yukta@gmail.com |
-| 3 | `bhuvigeotech.co.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | - | no | sirasanagandlasreenivasulu@gmail.com |
-| 4 | `firstvote.in` | - | verified 2026-07-01 | - | - | - | no | rajesh.yukta@gmail.com |
-| 5 | `halli.in` | - | verified 2026-10-28 | active (external) | presencive: active | docs: bangalore-test.halli.in (active, dns_ok), docs: docs.halli.in (active, dns_ok) | no | rajesh.yukta@gmail.com |
-| 6 | `hargharme.com` | - | verified 2026-07-17 | active (external) | presencive: active | blog: blog.hargharme.com (active, dns_ok), docs: nextdocs.hargharme.com (active, dns_ok), docs: prodocs.hargharme.com (active, dns_ok) | no | rajesh.yukta@gmail.com |
-| 7 | `icfluence.com` | - | verified 2026-07-22 | active (external) | presencive: active | - | no | rajesh.yukta@gmail.com |
-| 8 | `pureayurveda.in` | - | verified 2026-07-19 | active (external) | presencive: active | blog: blog.pureayurveda.in (active, dns_ok), handcraft: pureayurveda.in (active, dns_ok) | no | rajesh.yukta@gmail.com |
-| 9 | `rajesh.co.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | detached (registered) | presencive: detached | - | no | rajesh.yukta@gmail.com |
-| 10 | `rajesh.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | detached (registered) | presencive: detached | - | no | rajesh.yukta@gmail.com |
+| 1 | `athomepg.in` | active, exp 2027-07-19, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | handcraft: athomepg.in (active, dns_ok) | DNS VM zone (5 rec, A 3.6.143.66), NextDP Core | guruvishnu609@gmail.com |
+| 2 | `bharatgetonline.com` | - | verified 2026-07-28 | active (external) | presencive: active | - | DNS VM zone (3 rec, A -), NextDP Core | rajesh.yukta@gmail.com |
+| 3 | `bhuvigeotech.co.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | - | DNS VM zone (3 rec, A -), NextDP Core | sirasanagandlasreenivasulu@gmail.com |
+| 4 | `firstvote.in` | - | verified 2026-07-01 | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
+| 5 | `halli.in` | - | verified 2026-10-28 | active (external) | presencive: active | docs: bangalore-test.halli.in (active, dns_ok), docs: docs.halli.in (active, dns_ok) | DNS VM zone (8 rec, A 3.6.143.66), NextDP Core | rajesh.yukta@gmail.com |
+| 6 | `hargharme.com` | - | verified 2026-07-17 | active (external) | presencive: active | blog: blog.hargharme.com (active, dns_ok), docs: nextdocs.hargharme.com (active, dns_ok), docs: prodocs.hargharme.com (active, dns_ok) | DNS VM zone (10 rec, A -), NextDP Core | rajesh.yukta@gmail.com |
+| 7 | `icfluence.com` | - | verified 2026-07-22 | active (external) | presencive: active | - | DNS VM zone (11 rec, A 20.244.35.68), NextDP Core | rajesh.yukta@gmail.com |
+| 8 | `pureayurveda.in` | - | verified 2026-07-19 | active (external) | presencive: active | blog: blog.pureayurveda.in (active, dns_ok), handcraft: pureayurveda.in (active, dns_ok) | DNS VM zone (6 rec, A 3.6.143.66), NextDP Core | rajesh.yukta@gmail.com |
+| 9 | `rajesh.co.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | detached (registered) | presencive: detached | - | DNS VM zone (3 rec, A -), NextDP Core | rajesh.yukta@gmail.com |
+| 10 | `rajesh.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | detached (registered) | presencive: detached | - | DNS VM zone (3 rec, A -), NextDP Core | rajesh.yukta@gmail.com |
 | 11 | `rajesh1.com` | - | verified 2026-07-18 | - | nextdp: active | - | NextDP Core | rajesh.yukta@gmail.com |
-| 12 | `rajesh123.com` | active, exp 2027-07-18, cconsole, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | no | rajesh.yukta@gmail.com |
-| 13 | `rajeshyukta.co` | active, exp 2027-07-03, cconsole, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | no | rajesh.yukta@gmail.com |
+| 12 | `rajesh123.com` | active, exp 2027-07-18, cconsole, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
+| 13 | `rajeshyukta.co` | active, exp 2027-07-03, cconsole, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
 | 14 | `rajeshyukta.in` | - | verified 2026-07-09 | - | nextdp: active | blog: blog.rajeshyukta.in (active, pending_dns) | DNS VM zone (6 rec, A 3.6.143.66), NextDP Core | rajesh.yukta@gmail.com |
-| 15 | `rajeshyukta.net` | active, exp 2027-07-03, manual, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | no | rajesh.yukta@gmail.com |
-| 16 | `rajeshyukta.org` | active, exp 2027-07-01, manual, NS ns1.nextdp.com ns2.nextdp.com | - | - | - | - | no | rajesh.yukta@gmail.com |
-| 17 | `rajeshyukta.xyz` | active, exp 2027-07-03, manual, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | no | rajesh.yukta@gmail.com |
-| 18 | `rapidbot.in` | - | verified 2026-07-21 | active (external) | presencive: active | - | no | rajesh.yukta@gmail.com |
-| 19 | `srinivasulu.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | - | no | sirasanagandlasreenivasulu@gmail.com |
-| 20 | `vayamhindu.com` | - | verified 2026-07-24 | active (external) | presencive: active | - | no | rajesh.yukta@gmail.com |
+| 15 | `rajeshyukta.net` | active, exp 2027-07-03, manual, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
+| 16 | `rajeshyukta.org` | active, exp 2027-07-01, manual, NS ns1.nextdp.com ns2.nextdp.com | - | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
+| 17 | `rajeshyukta.xyz` | active, exp 2027-07-03, manual, NS ns1.presencive.com ns2.presencive.com | - | - | - | - | NextDP Core | rajesh.yukta@gmail.com |
+| 18 | `rapidbot.in` | - | verified 2026-07-21 | active (external) | presencive: active | - | DNS VM zone (20 rec, A 3.6.143.66), NextDP Core | rajesh.yukta@gmail.com |
+| 19 | `srinivasulu.in` | active, exp 2027-07-18, manual, NS ns1.presencive.com ns2.presencive.com | - | active (registered) | presencive: active | - | DNS VM zone (3 rec, A -), NextDP Core | sirasanagandlasreenivasulu@gmail.com |
+| 20 | `vayamhindu.com` | - | verified 2026-07-24 | active (external) | presencive: active | - | DNS VM zone (3 rec, A -), NextDP Core | rajesh.yukta@gmail.com |
 | 21 | `vircto.com` | - | pending | awaiting_ns (external) | - | - | NextDP Core | rajesh.yukta@gmail.com |
 
 ## 2. NextDigital (`nextdigital`)
@@ -121,7 +121,7 @@ Columns in the per-brand tables:
 | 32 | `panchang.io` | - | verified 2026-10-31 | active (external) | nextdp: active | - | DNS VM zone (7 rec, A 3.6.143.66), NextDP Core | rajesh@associate.works |
 | 33 | `pattanam.in` | - | verified 2026-11-09 | active (external) | nextdp: active | - | DNS VM zone (4 rec, A -), NextDP Core | rajesh@associate.works |
 | 34 | `promptation.ai` | - | verified 2026-11-13 | active (external) | nextdp: active | - | DNS VM zone (19 rec, A 3.6.143.66), NextDP Core | rajesh@associate.works |
-| 35 | `proseva.org` | active, exp 2027-08-09, manual, NS ns1.nextdp.com ns2.nextdp.com | - | detached (registered) | proseva: detached | - | DNS VM zone (6 rec, A 3.6.143.66), NextDP Core | rajesh@associate.works |
+| 35 | `proseva.org` | active, exp 2027-08-09, manual, NS ns1.nextdp.com ns2.nextdp.com | - | detached (registered) | proseva: detached | - | DNS VM zone (9 rec, A 3.6.143.66), NextDP Core | rajesh@associate.works |
 | 36 | `rajesh.app` | - | verified 2026-08-10 | active (external) | nextdp: active | - | DNS VM zone (8 rec, A 3.6.143.66), NextDP Core | rajesh@associate.works |
 | 37 | `rajesh.one` | - | verified 2026-09-24 | active (external) | nextdp: active | - | NextDP Core | rajesh@associate.works |
 | 38 | `rajesh.works` | - | verified 2026-08-04 | detached (external) | nextdp: detached | - | DNS VM zone (5 rec, A -), NextDP Core | rajesh@associate.works |
@@ -149,11 +149,11 @@ Columns in the per-brand tables:
 - Brand hosts: primary `leadyourbiz.com`, admin `admin.leadyourbiz.com`, console `console.leadyourbiz.com`, accounts (iDP) `accounts.leadyourbiz.com`
 - Sender: `support@leadyourbiz.com`. Brand nameservers: `ns1.leadyourbiz.com ns2.leadyourbiz.com`.
 - Features on: blogs, direct_register, dns, domains, handcraft, store.
-- Users: 2. On AWS now: brand not created; 0 of 1 domains are in live NextDP Core.
+- Users: 2. On AWS now: brand not created; 1 of 1 domains are in live NextDP Core (moved into a live brand as external domains).
 
 | # | Domain | Registered | External | Core DNS zone | Azure dns-service | Sites | On AWS now | Owner |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `leadyourbiz.in` | active, exp 2027-08-06, manual, NS ns1.leadyourbiz.com ns2.leadyourbiz.com | - | active (registered) | leadyourbiz: active | - | no | rajesh@leadyourbiz.com |
+| 1 | `leadyourbiz.in` | active, exp 2027-08-06, manual, NS ns1.leadyourbiz.com ns2.leadyourbiz.com | - | active (registered) | leadyourbiz: active | - | DNS VM zone (5 rec, A 3.6.143.66), NextDP Core | rajesh@leadyourbiz.com |
 
 ## 4. DigPre (`digpre`)
 
@@ -171,12 +171,12 @@ No customer domains.
 - Brand hosts: primary `nextdp.com`, admin `admin.nextdp.com`, console `console.nextdp.com`, accounts (iDP) `accounts.nextdp.com`
 - Sender: `noreply@nextdp.com`. Brand nameservers: `-`.
 - Features on: blogs, direct_register, dns, domains, handcraft, store.
-- Users: 2. On AWS now: brand exists in live NextDP Core; 0 of 2 domains are in live NextDP Core.
+- Users: 2. On AWS now: brand exists in live NextDP Core; 2 of 2 domains are in live NextDP Core (moved into a live brand as external domains).
 
 | # | Domain | Registered | External | Core DNS zone | Azure dns-service | Sites | On AWS now | Owner |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `hamarards.com` | active, exp 2027-08-25, manual, NS joan.ns.cloudflare.com renan.ns.cloudflare.com | - | - | - | - | no | hamarapublications@gmail.com |
-| 2 | `hamarards.org` | active, exp 2027-08-25, manual, NS joan.ns.cloudflare.com renan.ns.cloudflare.com | - | - | - | - | no | hamarapublications@gmail.com |
+| 1 | `hamarards.com` | active, exp 2027-08-25, manual, NS joan.ns.cloudflare.com renan.ns.cloudflare.com | - | - | - | - | NextDP Core | hamarapublications@gmail.com |
+| 2 | `hamarards.org` | active, exp 2027-08-25, manual, NS joan.ns.cloudflare.com renan.ns.cloudflare.com | - | - | - | - | NextDP Core | hamarapublications@gmail.com |
 
 ## 6. YOUR DPM (`dpm`)
 
@@ -184,11 +184,11 @@ No customer domains.
 - Brand hosts: admin `admin.yourdpm.com`, console `yourdpm.com`, accounts (iDP) `accounts.yourdpm.com` (no primary domain set)
 - Sender: `support@yourdpm.com`. Brand nameservers: `-`.
 - Features on: blogs, direct_register, dns, domains, handcraft, store.
-- Users: 2. On AWS now: brand not created; 0 of 1 domains are in live NextDP Core.
+- Users: 2. On AWS now: brand not created; 1 of 1 domains are in live NextDP Core (moved into a live brand as external domains).
 
 | # | Domain | Registered | External | Core DNS zone | Azure dns-service | Sites | On AWS now | Owner |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `whydpm.com` | - | verified 2026-08-28 | active (external) | yourdpm: active | blog: whydpm.com (active, dns_ok) | no | admin@yourdpm.com |
+| 1 | `whydpm.com` | - | verified 2026-08-28 | active (external) | yourdpm: active | blog: whydpm.com (active, dns_ok) | DNS VM zone (4 rec, A -), NextDP Core | admin@yourdpm.com |
 
 ## 7. Organic Growth Center (`ogcen`)
 
@@ -206,11 +206,11 @@ No customer domains.
 - Brand hosts: primary `proseva.org`, admin `admin.proseva.org`, console `console.proseva.org`, accounts (iDP) `accounts.proseva.org`
 - Sender: `noreply@proseva.org`. Brand nameservers: `ns1.proseva.org ns2.proseva.org`.
 - Features on: blogs, direct_register, dns, domains, handcraft, idp_login, store.
-- Users: 2. On AWS now: brand not created; 0 of 1 domains are in live NextDP Core.
+- Users: 2. On AWS now: brand not created; 1 of 1 domains are in live NextDP Core (moved into a live brand as external domains).
 
 | # | Domain | Registered | External | Core DNS zone | Azure dns-service | Sites | On AWS now | Owner |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `haindaviswaraj.org.in` | - | verified 2026-09-27 | active (external) | proseva: active | - | DNS VM zone (7 rec, A 3.6.143.66) | support@proseva.org |
+| 1 | `haindaviswaraj.org.in` | - | verified 2026-09-27 | active (external) | proseva: active | - | DNS VM zone (7 rec, A 3.6.143.66), NextDP Core | support@proseva.org |
 
 ## 9. LocalCen (`localcen`)
 

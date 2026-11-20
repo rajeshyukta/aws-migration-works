@@ -103,7 +103,7 @@ Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskche
 
 **Backups:** ❌ **none yet** (see section 8).
 
-**Realms (Next iDP) / brands (NextDP Core) 2026-11-20:** realms `nextdp-core` (`id.nextdp.com`), `ndp-nextdp` (`accounts.nextdp.com`), `cconsole` (`accounts.cconsole.com`), all `live`. Brand `nextdp` (`34831870-c4c1-4d8b-bd45-b77672b541d3`, `admin/console.nextdp.com`), `idp_status = pending` (needs Re-check in core.nextdp.com): **55 external domains + 54 managed-DNS zones** imported from the old Azure brand `nextdigital` on 2026-11-20, all owned by `rajesh@nextdp.com` (public id `xcztbuqqh`). Users: that brand superadmin + the platform `master_admin`. **DNS connection** to dns-service tenant `nextdp` (`https://dns.cconsole.com`, `ns1/ns2.nextdp.com`), webhook `https://console.nextdp.com/webhooks/dns` delivered. No `localcen` brand yet.
+**Realms (Next iDP) / brands (NextDP Core) 2026-11-20:** realms `nextdp-core` (`id.nextdp.com`), `ndp-nextdp` (`accounts.nextdp.com`), `cconsole` (`accounts.cconsole.com`), all `live`. Brand `nextdp` (`34831870-c4c1-4d8b-bd45-b77672b541d3`, `admin/console.nextdp.com`), `idp_status = pending` (needs Re-check in core.nextdp.com): **78 external domains + 69 managed-DNS zones** imported on 2026-11-20 from all old Azure brands (`nextdigital`, `presencive`, `leadyourbiz`, old `nextdp`, `dpm`, `proseva`; one brand for now, new brands later), all owned by `rajesh@nextdp.com` (public id `xcztbuqqh`). Users: that brand superadmin + the platform `master_admin`. **DNS connection** to dns-service tenant `nextdp` (`https://dns.cconsole.com`, `ns1/ns2.nextdp.com`), webhook `https://console.nextdp.com/webhooks/dns` delivered. No `localcen` brand yet.
 
 **Scripts / docs:** `scripts/apps-core-vm/01`–`17` (`05-deploy-localcen` is obsolete; `14-remove-localcen` removed it; `15` brand domain import, `16` brand DNS connection, `17` catch-all routing fix), `pull-*`, `audit-domains.sh`, [`azure-r2-restore.md`](azure-r2-restore.md), [`realm-nextdp-core.md`](realm-nextdp-core.md), [`realm-ndp-nextdp.md`](realm-ndp-nextdp.md). Repos: `projects/platform/nextidp` (`raiworks/nextidp`), `projects/platform/nextdp-core` (`rajeshyukta/nextdp`).
 
@@ -132,13 +132,13 @@ Dedicated VM for LocalCen, so it can be resized with sales without touching Next
 
 **Databases:** `pdns` (8 MB, owner `pdns`; the zone data PowerDNS serves), `dns_db` (9 MB, owner `dns_u`; dns-service tenants/users). **Staged read-only copy** (2026-11-20, not used by any app): `dns_service_r2` (owner `postgres`, R2 `a143e215`, the old Azure zone list without records) and `pdns_azure` (owner `postgres`, final Azure PowerDNS data from the `nmc-dns-1` disk, 2026-11-18 10:50 IST, 107 zones / 790 records), see [`azure-r2-restore.md`](azure-r2-restore.md).
 
-**Zones served (84, tenant `nextdp`, 2026-11-20):** the 23 set up on 2026-11-19 plus 61 imported from the old Azure PowerDNS (`scripts/dns-vm/09-import-azure-zones`, old PHP VM IP `20.207.200.1` rewritten to `3.6.143.66`, old Next iDP / Go apps / NS-glue records dropped). Full list per zone with status: [`azure-r2-dns-zones.md`](azure-r2-dns-zones.md). 57 old zones are delegated to `ns1/ns2.nextdp.com` at their registrar. `localcen.com` and `kalabhairavam.com` are on **Cloudflare**, so their PowerDNS zones are not used publicly. Backup before the import: `/var/backups/dns-vm/pre-azure-import-20261120T114625Z/` (+ `D:\nmc-backup\dns-vm\`).
+**Zones served (100, tenant `nextdp`, 2026-11-20):** the 23 set up on 2026-11-19 plus 77 imported from the old Azure PowerDNS (accounts `nextdp`, `presencive`, `proseva`, `leadyourbiz`, `yourdpm`, `savadhan`) (`scripts/dns-vm/09-import-azure-zones`, old PHP VM IP `20.207.200.1` rewritten to `3.6.143.66`, old Next iDP / Go apps / NS-glue records dropped). Full list per zone with status: [`azure-r2-dns-zones.md`](azure-r2-dns-zones.md). 57 old zones are delegated to `ns1/ns2.nextdp.com` at their registrar. `localcen.com` and `kalabhairavam.com` are on **Cloudflare**, so their PowerDNS zones are not used publicly. Backups before the imports: `/var/backups/dns-vm/pre-azure-import-20261120T114625Z/` and `pre-azure-import2-20261120T125538Z/` (+ `D:\nmc-backup\dns-vm\`). 11 imported zones are still delegated to old brand NS names that point to dead Azure IPs (TODO 1.0).
 
 **Firewall:** `ufw` active (22, 53 tcp/udp, 80, 443), `fail2ban` active.
 
 **Secrets (paths):** `/root/.dns-vm-secrets.env`, `/root/.dns-nextdp-secrets.env`, `/srv/apps/dns-service/shared/.env`. PC copies: `private-data/dns-nextdp.env`, `dns-vm-accounts.txt`, `dns-idp.txt`.
 
-**Backups:** ❌ **no nightly backup yet** (only the one-off dump before the 2026-11-20 import). Losing `pdns` means losing all 84 zones.
+**Backups:** ❌ **no nightly backup yet** (only the one-off dump before the 2026-11-20 import). Losing `pdns` means losing all 100 zones.
 
 **Scripts:** `scripts/dns-vm/`. Repo: `projects/platform/dns-service` (`RajeshYukta/dns-service`).
 
@@ -149,7 +149,7 @@ Dedicated VM for LocalCen, so it can be resized with sales without touching Next
 | Managed at | Domains | Notes |
 |---|---|---|
 | **Cloudflare** (`kai`/`rachel.ns.cloudflare.com`) | `nextdp.com`, `localcen.com`, `dithim.com`, `rajesh1.com` (and others not on ns1/ns2) | `ns1.nextdp.com` / `ns2.nextdp.com` A records (glue) live in the Cloudflare `nextdp.com` zone. MX `nextdp.com` → `0 mx.nextdp.com` |
-| **PowerDNS on the DNS VM** (`ns1/ns2.nextdp.com`) | The 84 zones in section 6 ([`azure-r2-dns-zones.md`](azure-r2-dns-zones.md)), e.g. `cconsole.com`, `nextidp.com`, `mrajesh.com`, `rajeshyukta.in` | Edit through dns-service (`dns.cconsole.com`, `admin.dns.cconsole.com`) |
+| **PowerDNS on the DNS VM** (`ns1/ns2.nextdp.com`) | The 100 zones in section 6 ([`azure-r2-dns-zones.md`](azure-r2-dns-zones.md)), e.g. `cconsole.com`, `nextidp.com`, `mrajesh.com`, `rajeshyukta.in` | Edit through dns-service (`dns.cconsole.com`, `admin.dns.cconsole.com`) |
 
 **Key records (checked via 1.1.1.1):**
 
