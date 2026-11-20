@@ -19,9 +19,15 @@ try {
         Push-Location (Join-Path $lcRepo "frontend")
         try {
             $env:COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
-            foreach ($c in @("install --frozen-lockfile", "build:admin", "build:tenant", "build:app")) {
-                & pnpm @($c -split ' '); if ($LASTEXITCODE -ne 0) { throw "pnpm $c failed" }
-            }
+            # pnpm writes warnings to stderr; PowerShell 5.1 would stop on them, so judge by exit code only.
+            $eap = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+            try {
+                foreach ($c in @("install --frozen-lockfile", "build:admin", "build:tenant", "build:app")) {
+                    $pnpmArgs = $c -split ' '  # splat: pnpm can be a .ps1 wrapper, which takes @(...) as one argument
+                    & pnpm @pnpmArgs 2>&1 | ForEach-Object { "$_" } | Select-Object -Last 3 | Out-Host
+                    if ($LASTEXITCODE -ne 0) { throw "pnpm $c failed" }
+                }
+            } finally { $ErrorActionPreference = $eap }
         } finally { Pop-Location }
     }
     foreach ($p in "frontend\admin\dist\index.html", "frontend\tenant\dist\index.html", "frontend\app\dist\index.html") {
