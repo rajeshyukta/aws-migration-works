@@ -92,7 +92,8 @@ function Invoke-VmCommand {
         [Parameter(Mandatory = $true)][psobject]$Vm,
         [Parameter(Mandatory = $true)][string]$Command
     )
-    & ssh -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 $Vm.Target $Command
+    # -n: never read stdin (an idle stdin made ssh hang now and then)
+    & ssh -n -i $Vm.SshKey -o StrictHostKeyChecking=accept-new -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 $Vm.Target $Command
     if ($LASTEXITCODE -ne 0) {
         throw "ssh command failed (exit $LASTEXITCODE): $Command"
     }
