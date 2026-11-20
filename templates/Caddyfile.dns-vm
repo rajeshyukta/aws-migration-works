@@ -1,0 +1,34 @@
+# DNS-VM (52.66.165.1 / 52.66.25.51) — dns-service Caddyfile
+# Both hosts reverse-proxy to loopback dns-service (:8080); the binary serves
+# tenant console + machine API on dns.cconsole.com and super-admin console on
+# admin.dns.cconsole.com. Auto-HTTPS via HTTP-01 once A records point to 52.66.165.1.
+
+dns.cconsole.com {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        -Server
+    }
+    reverse_proxy 127.0.0.1:8080 {
+        header_up Host {host}
+    }
+    log {
+        output file /var/log/caddy/dns.access.log
+    }
+}
+
+admin.dns.cconsole.com {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        -Server
+    }
+    reverse_proxy 127.0.0.1:8080 {
+        header_up Host {host}
+    }
+    log {
+        output file /var/log/caddy/admin-dns.access.log
+    }
+}
