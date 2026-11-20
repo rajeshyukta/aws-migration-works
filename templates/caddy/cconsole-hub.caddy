@@ -1,0 +1,68 @@
+# CConsole Hub (reseller-mw) — Caddy site blocks for Mail VM
+# Included by /etc/caddy/Caddyfile via `import /etc/caddy/sites-enabled/*.caddy`.
+# Uses the shared (access_log) snippet from Caddyfile.mail-vm.
+
+api.hub.cconsole.com, sandbox.hub.cconsole.com {
+    root * /srv/phpapps/cconsole-hub/ci4-app/public
+    encode gzip zstd
+
+    @blocked path /.* *.env* *.log *.sql *.bak
+    respond @blocked 403
+
+    php_fastcgi unix//run/php/app-cconsole-hub.sock
+    file_server
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        -Server
+    }
+
+    import access_log /var/log/caddy/live/cconsole-hub-access.log
+}
+
+hub.cconsole.com {
+    root * /srv/phpapps/cconsole-hub/frontend/tenant/dist
+    encode gzip zstd
+    try_files {path} /index.html
+    file_server
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+
+    import access_log /var/log/caddy/live/cconsole-hub-access.log
+}
+
+admin.hub.cconsole.com {
+    root * /srv/phpapps/cconsole-hub/frontend/admin/dist
+    encode gzip zstd
+    try_files {path} /index.html
+    file_server
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        -Server
+    }
+
+    import access_log /var/log/caddy/live/cconsole-hub-access.log
+}
+
+docs.hub.cconsole.com {
+    root * /srv/phpapps/cconsole-hub/ci4-app/public/docs
+    encode gzip zstd
+    file_server
+
+    header {
+        Access-Control-Allow-Origin "*"
+        Cache-Control "public, max-age=300"
+        -Server
+    }
+
+    import access_log /var/log/caddy/live/cconsole-hub-access.log
+}

@@ -227,6 +227,11 @@ dithim.com {
 }
 
 # ─────────────────────────────────────────────
+# Additional site blocks (e.g. cconsole-hub)
+# ─────────────────────────────────────────────
+import /etc/caddy/sites-enabled/*.caddy
+
+# ─────────────────────────────────────────────
 # Catch-All Maintenance Page (all parked/migrating domains -> *)
 # Uses on_demand TLS guarded by http://127.0.0.1:9055/ask
 # ─────────────────────────────────────────────

@@ -65,7 +65,11 @@ The restore scripts:
 4. Run `cd /opt/nextdp/config && /opt/nextdp/bin/nextdp migrate` and print row counts (`organizations`, `domains`, `users`, `mailboxes`, `messages`, `raw_emails`, `attachments`).
 5. Enable and start `nextdp`, `nextdp-worker`, and `nextdp-scheduler`.
 
-### Outbound Transport & Login Notes (Restored `2026-08-26` State)
+### Current State (since `2026-11-20`): R2 snapshot + AWS delta
+
+On `2026-11-20` 10:08 IST, `nextdp_mail` was switched to R2 snapshot `689c5e6a` (2026-11-18 08:30 IST) plus everything the Mail VM received after the August restore. The Aug→Nov mail files were taken from the Azure disk `nmc-mail-1-osdisk`. The August DB is kept as `nextdp_mail_aug_old`. Full record, scripts (`10`–`15`) and rollback: [`mail-vm-db-upgrade-r2.md`](mail-vm-db-upgrade-r2.md). The notes below about the August restore are history; org transport settings did not change.
+
+### Outbound Transport & Login Notes (Restored `2026-08-26` State, history)
 
 - Global `system_settings` and organizations `default` (`rajesh@nextdp.com`, including `nextdp.com`) and `rajesh-one` (`rajesh@navasanatani.com`) use **ZeptoMail API** (`region=in`, `api.zeptomail.in`), verified reachable over HTTPS from `52.66.111.138`.
 - Organization `idn-mail` (`rajesh@digpre.com`: `digpre.com`, IDN domains) still has legacy SMTP relay `mailout.nextdp.com:587` configured in its org settings; update it to ZeptoMail in the Admin Console if you want outbound delivery via ZeptoMail for those domains too.

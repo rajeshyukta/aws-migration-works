@@ -28,38 +28,50 @@ function Initialize-Toolchain {
 
 function Get-VmTarget {
     param(
-        [string]$RepoRoot = (Resolve-RepoRoot)
+        [string]$RepoRoot = (Resolve-RepoRoot),
+        [string]$Name = "Mail VM"
     )
     $vmsFile = Join-Path $RepoRoot "private-data\vms-details.txt"
     if (-not (Test-Path $vmsFile)) {
         throw "Missing VM inventory file: $vmsFile"
     }
 
-    $ip = ""
-    $user = "ubuntu"
-    $sshKey = ""
-
+    $entries = @{}
+    $currentName = ""
     foreach ($rawLine in (Get-Content $vmsFile)) {
         $line = $rawLine.Trim()
-        if ($line -match '^ip:\s*(.+)$') {
-            $ip = $Matches[1].Trim().Trim('"')
-        } elseif ($line -match '^user:\s*(.+)$') {
-            $user = $Matches[1].Trim().Trim('"')
-        } elseif ($line -match '^ssh_key:\s*(.+)$') {
-            $sshKey = $Matches[1].Trim().Trim('"')
+        if (-not $line -or $line.StartsWith('#')) { continue }
+        if ($line -match '^([a-zA-Z0-9_]+):\s*(.+)$') {
+            if (-not $currentName) { $currentName = "default" }
+            $k = $Matches[1].ToLowerInvariant()
+            $v = $Matches[2].Trim().Trim('"')
+            if ($k -eq 'ip') { $entries[$currentName].IP = $v }
+            elseif ($k -eq 'user') { $entries[$currentName].User = $v }
+            elseif ($k -eq 'ssh_key') { $entries[$currentName].SshKey = $v }
+        } else {
+            $currentName = $line
+            if (-not $entries.ContainsKey($currentName)) {
+                $entries[$currentName] = @{ IP = ""; User = "ubuntu"; SshKey = "" }
+            }
         }
     }
 
-    if (-not $ip) { throw "Could not parse 'ip:' from $vmsFile" }
-    if (-not $sshKey -or -not (Test-Path $sshKey)) {
-        throw "SSH key not found: $sshKey"
+    if (-not $entries.ContainsKey($Name)) {
+        $avail = ($entries.Keys -join ', ')
+        throw "VM '$Name' not found in $vmsFile (available: $avail)"
+    }
+    $sel = $entries[$Name]
+    if (-not $sel.IP) { throw "Could not parse 'ip:' for '$Name' in $vmsFile" }
+    if (-not $sel.SshKey -or -not (Test-Path $sel.SshKey)) {
+        throw "SSH key not found: $($sel.SshKey)"
     }
 
     return [PSCustomObject]@{
-        IP     = $ip
-        User   = $user
-        Target = "$user@$ip"
-        SshKey = $sshKey
+        Name   = $Name
+        IP     = $sel.IP
+        User   = $sel.User
+        Target = "$($sel.User)@$($sel.IP)"
+        SshKey = $sel.SshKey
     }
 }
 
