@@ -93,7 +93,7 @@ All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), C
 
 Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskcheck`, `fail2ban`.
 
-**Databases:** `nextidp` (13 MB, owner `nextidp`), `nextdp_core` (10 MB, `nextdp_core`). (`localcen_db` dropped 2026-11-20 after the move; final dump in `D:\nmc-backup\apps-core\localcen-retired-20261120T085819Z\`.) **Fresh setups**: the old Azure data is in R2 (`nextidp` `6cbb9b6a`, `nextdp_core` `468f8e88`, `nextlocal` `807188cf`) if it is ever needed.
+**Databases:** `nextidp` (13 MB, owner `nextidp`), `nextdp_core` (10 MB, `nextdp_core`). (`localcen_db` dropped 2026-11-20 after the move; final dump in `D:\nmc-backup\apps-core\localcen-retired-20261120T085819Z\`.) **Fresh setups**: the old Azure data is in R2 (`nextidp` `6cbb9b6a`, `nextdp_core` `468f8e88`, `nextlocal` `807188cf`) if it is ever needed. **Staged read-only copy** (2026-11-20, not used by any app): `nextdp_core_r2` (owner `postgres`, R2 `468f8e88`), see [`azure-r2-restore.md`](azure-r2-restore.md); drop it after the brand import.
 
 **How new domains switch on (no per-domain Caddy config):** Caddy's global on-demand TLS asks the multiplexer `:8099`, which asks Next iDP `/_edge/ask` (master host, realm issuer hosts) and NextDP Core `/internal/tls/ask` (`core.nextdp.com` + active brands' admin/console hosts from the `brands` table). The `https://` catch-all sends traffic to Next iDP first; Next iDP answers **421** for hosts it does not own and Caddy hands them to NextDP Core. Brands created in the core.nextdp.com UI refresh NextDP Core's host cache at once; a brand created by script needs a `nextdp` restart (the `13-setup-nextdp-brand` script does it). Check anytime: `scripts/apps-core-vm/audit-domains.sh`.
 
@@ -130,7 +130,7 @@ Dedicated VM for LocalCen, so it can be resized with sales without touching Next
 
 **Services:** `pdns` (PowerDNS authoritative, `:53` on both private IPs), `dns-service` (`:8080`, behind Caddy) + `dns-service-scheduler`, `caddy` (`dns.cconsole.com`, `admin.dns.cconsole.com`), `postgresql@16-main`, timer `dns-vm-diskcheck`, `fail2ban`.
 
-**Databases:** `pdns` (8 MB, owner `pdns`; the zone data PowerDNS serves), `dns_db` (9 MB, owner `dns_u`; dns-service tenants/users).
+**Databases:** `pdns` (8 MB, owner `pdns`; the zone data PowerDNS serves), `dns_db` (9 MB, owner `dns_u`; dns-service tenants/users). **Staged read-only copy** (2026-11-20, not used by any app): `dns_service_r2` (owner `postgres`, R2 `a143e215`, the old Azure zone list without records), see [`azure-r2-restore.md`](azure-r2-restore.md).
 
 **Zones served (23, tenant `nextdp`):** afteraiwork.com, cconsole.com, daiskills.com, forbharat.com, forbharat.in, forbharat.org, haindaviswaraj.org.in, jyothularajesh.com, kalabhairavam.com, localcen.com\*, mrajesh.com, navduta.com, nextdigital.in, nextidp.com, nextskillclub.com, ogcen.com, organicgrowth.center, proseva.org, rajeshforbharat.com, rajeshyukta.in, softskills.training, srikalabhairavam.com, srikalabhairavam.in.
 \* `localcen.com` is delegated to **Cloudflare** at the registrar, so its PowerDNS zone is not used publicly.
