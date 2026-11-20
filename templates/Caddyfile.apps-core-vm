@@ -2,7 +2,6 @@
 # Serves:
 #   - Next iDP    (:8080) — nextidp.com + custom realm hosts
 #   - NextDP Core (:8090) — core.nextdp.com + brand hosts
-#   - LocalCen    (:8092) — localcen.cconsole.com, admin.localcen.cconsole.com + member hosts
 {
     on_demand_tls {
         ask http://127.0.0.1:8099/ask
@@ -54,50 +53,7 @@ https://core.nextdp.com {
     }
 }
 
-# ── LocalCen consoles (:8092) ─────────────────────────────────────────────
-https://admin.localcen.cconsole.com {
-    encode gzip
-    handle /v1/* {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle /auth/* {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle /no-access {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle {
-        root * /srv/apps/localcen/current/consoles/admin
-        try_files {path} /index.html
-        file_server
-    }
-    log {
-        output file /var/log/caddy/admin-localcen.access.log
-    }
-}
-
-https://localcen.cconsole.com {
-    encode gzip
-    handle /v1/* {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle /auth/* {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle /no-access {
-        reverse_proxy 127.0.0.1:8092
-    }
-    handle {
-        root * /srv/apps/localcen/current/consoles/tenant
-        try_files {path} /index.html
-        file_server
-    }
-    log {
-        output file /var/log/caddy/localcen.access.log
-    }
-}
-
-# ── Shared-Caddy site snippets (incl. localcen-hosts.caddy) ───────────────
+# ── Shared-Caddy site snippets ───────────────
 import /etc/caddy/sites-enabled/*.caddy
 
 # ── Dynamic custom / realm / brand host catch-all ─────────────────────────

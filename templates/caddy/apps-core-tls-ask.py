@@ -4,7 +4,6 @@
 Chains Caddy's ask check across co-hosted backends on the VM:
   1. Next iDP    (127.0.0.1:8080/_edge/ask)
   2. NextDP Core (127.0.0.1:8090/internal/tls/ask)
-  3. LocalCen    (127.0.0.1:8092/internal/tls-allow)
 Returns HTTP 200 on the first 2xx match, else 403.
 """
 
@@ -19,7 +18,6 @@ LISTEN_PORT = 8099
 UPSTREAMS = (
     ("nextidp", "http://127.0.0.1:8080/_edge/ask?domain="),
     ("nextdp-core", "http://127.0.0.1:8090/internal/tls/ask?domain="),
-    ("localcen", "http://127.0.0.1:8092/internal/tls-allow?domain="),
 )
 
 

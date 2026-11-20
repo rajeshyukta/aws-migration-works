@@ -14,7 +14,7 @@ One place to look up what runs where on the AWS servers that replaced the Azure/
 |---|---|---|---|---|---|
 | **Mail VM** | `52.66.111.138` | Lightsail `NextDP-Mail-VM` (private `172.26.3.188`) | t3.small: 2 vCPU, 1.9 GB RAM + 2 GB swap, 58 GB disk (13% used) | ap-south-1a | NextDP Mail (SMTP/IMAP/POP3 + 3 web consoles), dithim.com, catch-all maintenance page |
 | **Web-1** | `3.6.143.66` | Lightsail (private `172.26.9.186`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 58 GB (11%) | ap-south-1a | PHP 8.4 + static sites (OGCEN, domains app, CConsole Hub, ~35 domains) |
-| **Apps-Core-VM** | `43.204.42.99` | EC2 `i-0eee8167ad7ff9be0` (private `172.31.2.129`) | t3.large: 2 vCPU, 7.8 GB + 2 GB swap, 48 GB (11%) | ap-south-1b | Next iDP (`accounts.<brand>`), NextDP Core, LocalCen |
+| **Apps-Core-VM** | `43.204.42.99` | EC2 `i-0eee8167ad7ff9be0` (private `172.31.2.129`) | t3.large: 2 vCPU, 7.8 GB + 2 GB swap, 48 GB (11%) | ap-south-1b | Next iDP (`accounts.<brand>`), NextDP Core (incl. brand hosts like `admin/console.localcen.com`). LocalCen moved to LocalCen-1-VM 2026-11-20 |
 | **LocalCen-1-VM** | `3.111.132.3` (Elastic IP) | EC2 `i-007e720a8c578aad7` (private `172.31.8.71`) | t2.medium: 2 vCPU, 3.9 GB + 2 GB swap, 48 GB gp3 | ap-south-1b | LocalCen (dedicated, customer domains via on-demand TLS); NextBuilder later. **Live since 2026-11-20** for the cconsole.com hosts (section 5b) |
 | **DNS VM** | `52.66.165.1` (**ns1**) + `52.66.25.51` (**ns2**) | EC2 `i-0fe9b807d4d2fad7d` (2 private IPs `172.31.14.174`, `172.31.11.141`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 29 GB (17%) | ap-south-1b | PowerDNS authoritative `ns1/ns2.nextdp.com` + dns-service UI/API |
 
@@ -89,12 +89,11 @@ All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), C
 |---|---|---|---|---|
 | **Next iDP** | `nextidp`, `nextidp-worker`; timers `nextidp-mail-prune`, `nextidp-contact-prune`, `nextidp-audit-prune` | `:8080` | `nextidp.com`, `www.nextidp.com`, `admin.nextidp.com`, and **any `accounts.<brand>`** (e.g. `accounts.nextdp.com`) via the on-demand TLS catch-all | `/opt/nextidp` |
 | **NextDP Core** | `nextdp`, `nextdp-worker`, `nextdp-scheduler` | `:8090` | `core.nextdp.com` (+ catch-all routes) | `/srv/apps/nextdp` (`current` → `20261119T040820`) |
-| **LocalCen** | `localcen`, `localcen-worker`; timers `localcen-caddy-sync`, `localcen-cleanup` | `:8092` | `localcen.cconsole.com`, `console.localcen.com`, `admin.localcen.cconsole.com`, `admin.localcen.com` | `/srv/apps/localcen` (`current` → `20261118T174020`) |
 | TLS ask | `apps-core-tls-ask` | `127.0.0.1:8099` | guards on-demand certificates | `templates/caddy/apps-core-tls-ask.py` |
 
 Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskcheck`, `fail2ban`.
 
-**Databases:** `nextidp` (13 MB, owner `nextidp`), `nextdp_core` (10 MB, `nextdp_core`), `localcen_db` (10 MB, `localcen_u`). **Fresh setups**: the old Azure data is in R2 (`nextidp` `6cbb9b6a`, `nextdp_core` `468f8e88`, `nextlocal` `807188cf`) if it is ever needed.
+**Databases:** `nextidp` (13 MB, owner `nextidp`), `nextdp_core` (10 MB, `nextdp_core`). (`localcen_db` dropped 2026-11-20 after the move; final dump in `D:\nmc-backup\apps-core\localcen-retired-20261120T085819Z\`.) **Fresh setups**: the old Azure data is in R2 (`nextidp` `6cbb9b6a`, `nextdp_core` `468f8e88`, `nextlocal` `807188cf`) if it is ever needed.
 
 **Firewall:** `ufw` active (22/80/443), `fail2ban` active. Ports 8080/8090/8092 listen on all interfaces but are **not** reachable from outside (checked).
 
