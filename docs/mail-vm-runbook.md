@@ -145,14 +145,14 @@ Check full VM health:
 powershell -NoProfile -File .\scripts\mail-vm\status.ps1
 ```
 
-Once verified live, restrict the AWS Lightsail instance firewall from "All ports" to **only**:
+**Done 2026-11-20 07:02 UTC** with `scripts/mail-vm/18-lightsail-firewall.ps1` (Lightsail instance `NextDP-Mail-VM`, needs `aws login`). It replaced the "All protocols, all ports" rule with **only** the ports below, then checked them from outside: the listed ports are open, and 53/8080/8090/5432/6379/9055 are closed. Web-1 still reaches `172.26.3.188:25` for backup alerts, and webmail/admin/dithim.com return 200. The old rule is saved in `temp/lightsail-ports-NextDP-Mail-VM-20261120T070141Z.json` (restore command in the script header). Port 53 was dropped because `ns1/ns2.nextdp.com` now point to the DNS VM (no glue or delegation points at this IP; 0 queries in a 45 s capture). Port 8080 was dropped because Caddy reaches NextDP on `localhost:8080`.
 
 | Protocol | Port | Purpose |
 |---|---|---|
 | TCP | `22` | SSH (optionally restrict to your IP) |
-| TCP | `25` | Inbound SMTP (MX delivery) |
-| UDP + TCP | `53` | CoreDNS authoritative DNS (`ns1`/`ns2.nextdp.com`) |
+| TCP | `25` | Inbound SMTP (MX delivery) + backup alerts from Web-1 |
 | TCP | `80` | HTTP → HTTPS redirect & ACME HTTP-01 |
+| UDP | `443` | HTTP/3 (QUIC) for Caddy |
 | TCP | `443` | HTTPS (Webmail, Admin, Super Admin, Autoconfig, Maintenance) |
 | TCP | `465` | SMTPS (implicit TLS submission) |
 | TCP | `587` | SMTP Submission (STARTTLS) |

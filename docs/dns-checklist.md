@@ -1,5 +1,7 @@
 # DNS Checklist — Mail VM (`52.66.111.138`)
 
+> **History (2026-11-18).** The "Nameserver Cutover" section below is superseded: `ns1.nextdp.com` → `52.66.165.1` and `ns2.nextdp.com` → `52.66.25.51` (DNS VM, PowerDNS). Current DNS facts: [`vms-setup-and-services-and-all-info.md`](vms-setup-and-services-and-all-info.md) section 7. The mail hostnames in the first table are still correct.
+
 Verified against `1.1.1.1` on 2026-11-18. Both `nextdp.com` and `rajesh1.com` are hosted on Cloudflare.
 
 ## Core Mail & Console Hostnames

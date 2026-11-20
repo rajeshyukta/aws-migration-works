@@ -1,8 +1,28 @@
 # TODO
 
 Open follow-ups for the AWS setup and migrations. Tick an item and add the date when it is done.
+VM reference (what runs where, risks): [`vms-setup-and-services-and-all-info.md`](vms-setup-and-services-and-all-info.md).
+
+**AW Vault is down** (it ran on Azure). Until it is back, "upload to the AW Vault" below means: password manager + offline copy + laptop.
+
+## All VMs
+
+- [ ] **Owner: back up the secrets in `private-data/`** to a password manager (Bitwarden/1Password) + an offline copy (USB/printout), and copy them to the laptop. Not Google Drive, not git.
+  - Must-have: `dithim-aws.pem` (SSH to all 4 VMs), `mail-vm-offsite-backup.env`, `web-1-offsite-backup.env` (and the two new ones once item 2 is done), `r2.env`, `nmc-main-env.txt` (unlocks the old NMC R2 backups), `vms-details.txt`.
+  - Also useful: the pulled app credentials (`aws-vm-*.env`, `*-admin.env`, `*-realm.env`, `*-accounts.txt`, `dns-*`, `zoho-*`).
+  - This also covers the "upload to the AW Vault" items below.
+- [ ] **Later: off-site backup for Apps-Core-VM and DNS VM.** Same tool and pattern as Web-1 (`scripts/web-1-vm/07-setup-offsite-backup.ps1` + a `templates/backup/<vm>.backup.conf`):
+  - Apps-Core-VM → repo `aws-apps-core/`: DBs `nextidp`, `nextdp_core`, `localcen_db`; files `/opt/nextidp`, `/srv/apps/*/shared`, `/etc/caddy`, `/etc/systemd/system`, `/root/.*-secrets.env`; restore test `nextidp`.
+  - DNS VM → repo `aws-dns-vm/`: DBs `pdns` (all 23 zones), `dns_db`; files `/srv/apps/dns-service/shared`, `/etc/powerdns`, `/etc/caddy`, `/root/.dns-*`; restore test `pdns`.
+  - Both need restic installed (the setup script does it) and alert mail through the Mail VM's private IP. Check that `172.26.3.188:25` is reachable from these EC2 VMs (different VPC from Lightsail). If not, alert through ZeptoMail.
+- [ ] **Later: second DNS server (ns2) on its own VM.** Today ns1 and ns2 are two IPs on the same DNS VM. Add a small VM in another AZ (or a secondary DNS provider via AXFR/NOTIFY) and repoint `ns2.nextdp.com` (glue in the Cloudflare `nextdp.com` zone).
+- [ ] **Later: AWS root user.** The CLI is logged in as the account root. Create an IAM user/role for daily Lightsail/EC2 work, enable MFA on root.
+- [ ] **Later: SSH hardening.** SSH (22) is open to any IP on all VMs. Consider restricting it to the owner's IPs, or using Lightsail/SSM browser access. Enable `fail2ban` on the Mail VM (it is the only VM without it).
 
 ## Mail VM (`52.66.111.138`)
+
+- [x] **Lightsail firewall: only required ports** (done 2026-11-20, `scripts/mail-vm/18-lightsail-firewall.ps1`): tcp 22/25/80/443/465/587/143/993/110/995 + udp 443. 53 and 8080 are closed. Web-1 alerts and all web consoles verified.
+- [ ] **Later: retire CoreDNS on the Mail VM** (no public traffic since port 53 closed and ns1/ns2 moved). Stop/disable `coredns` after a week with no DNS issues.
 
 - [ ] **Upload `private-data/mail-vm-offsite-backup.env` to the AW Vault** (project `dev-workspace`).
   - It holds the only copy of the off-site backup password outside the Mail VM. Without it, the R2 backup (`nxtmngr-test/aws-mail-vm`) cannot be restored if both this PC and the VM are lost.

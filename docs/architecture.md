@@ -1,5 +1,7 @@
 # Architecture: Azure NMC Fleet → Standalone AWS Lightsail
 
+> **History (written 2026-11-18 for the first VM).** The current state of all 4 VMs is in [`vms-setup-and-services-and-all-info.md`](vms-setup-and-services-and-all-info.md). Changes since this was written: `nextdp_mail` was moved to the R2 snapshot + AWS delta on 2026-11-20 ([`mail-vm-db-upgrade-r2.md`](mail-vm-db-upgrade-r2.md)). `ns1/ns2.nextdp.com` now point to the DNS VM, so the CoreDNS section below is a fallback with no public traffic, and port 53 is closed. The Mail VM firewall allows only the mail/web ports. CConsole Hub moved to Web-1. Each VM has its own off-site backup.
+
 ## Context
 
 The Azure NextManager Core (`nmc-*`) fleet (`nmc-main`, `nmc-db-1`, `nmc-db-2`, `nmc-cache-1`, `nmc-dns-1/2`, `nmc-idp-1`, `nmc-apps-1`, `nmc-mail-1`, `nmc-php-stage-1`) was stopped when the Azure subscription was disabled pending a support ticket.
