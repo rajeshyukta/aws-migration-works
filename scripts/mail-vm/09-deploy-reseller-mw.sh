@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# OBSOLETE since 2026-11-20: CConsole Hub moved to Web-1 (scripts/web-1-vm/06-deploy-cconsole-hub.*).
+# Kept for history only. Do NOT run: it would re-add the hub to the Mail VM.
 # Deploy CConsole Hub (reseller-mw) onto the Mail VM (52.66.111.138)
 # Installs PHP 8.4-FPM (pm=ondemand), Composer deps, PG db cconsole_hub (Redis DB 1),
 # Caddy site blocks, migrations + PlatformSettingsSeeder, and cron jobs.

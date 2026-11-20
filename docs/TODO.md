@@ -17,3 +17,17 @@ Open follow-ups for the AWS setup and migrations. Tick an item and add the date 
     sudo -u postgres psql -p 5432 -c "DROP DATABASE nextdp_mail_aug_old;"
     ```
   - Details: [`mail-vm-db-upgrade-r2.md`](mail-vm-db-upgrade-r2.md) (sections 4.3 and 6).
+
+## CConsole Hub move to Web-1 (`3.6.143.66`)
+
+Details: [`cconsole-hub-web-1.md`](cconsole-hub-web-1.md).
+
+- [x] **Owner: change 5 DNS A records to `3.6.143.66`** (done 2026-11-20): `hub`, `api.hub`, `admin.hub`, `docs.hub`, `sandbox.hub` (`.cconsole.com`).
+- [x] **Agent: run `06-deploy-cconsole-hub.ps1 -Phase sites`** (done 2026-11-20; Let's Encrypt on all 5 hosts).
+- [x] **Agent: retire on the Mail VM** with `scripts/mail-vm/17-remove-cconsole-hub.sh` (done 2026-11-20).
+- [ ] **Owner: set ZeptoMail + ResellerClub credentials** in `/srv/phpapps/cconsole-hub/ci4-app/.env` on Web-1, and create the first super admin (`php spark auth:create-admin`).
+- [ ] **Delete the old hub on the Mail VM after 2026-12-04**: `/srv/phpapps/cconsole-hub` and DB `cconsole_hub` (the R2 dump on this PC stays).
+
+## Web-1
+
+- [ ] **Off-site backup for Web-1.** Web-1 has no backup of its own (DBs `domains_rajesh`, `web1_apps`, `cconsole_hub`, the SQLite files, `/srv`). Same pattern as the Mail VM ([`mail-vm-offsite-backup.md`](mail-vm-offsite-backup.md)) with its own repo prefix, e.g. `aws-web-1`.

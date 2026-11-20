@@ -1,3 +1,5 @@
+# OBSOLETE since 2026-11-20: CConsole Hub moved to Web-1 (scripts/web-1-vm/06-deploy-cconsole-hub.ps1).
+# Kept for history only. Do NOT run: it would re-add the hub to the Mail VM.
 # Build and deploy CConsole Hub (reseller-mw) onto the Mail VM (52.66.111.138)
 param(
     [switch]$SkipFrontendBuild
