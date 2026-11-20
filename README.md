@@ -1,6 +1,6 @@
 # AWS Migration Works (`aws-migration-works`)
 
-Setup scripts, Caddy/systemd templates, runbooks and backup tooling for the **4 AWS VMs** that run all live services since the Azure subscription was disabled (2026-11-18). Each VM is standalone: local PostgreSQL 16, Redis, Caddy, systemd, its own off-site backup. There is no NextManager Core.
+Setup scripts, Caddy/systemd templates, runbooks and backup tooling for the **AWS VMs** that run all live services since the Azure subscription was disabled (2026-11-18). Each VM is standalone: local PostgreSQL 16, Redis, Caddy, systemd, its own off-site backup. There is no NextManager Core.
 
 **Start here: [`docs/vms-setup-and-services-and-all-info.md`](docs/vms-setup-and-services-and-all-info.md)** (what runs where, ports, domains, databases, backups, secret locations, risks). Open work: [`docs/TODO.md`](docs/TODO.md).
 
@@ -11,6 +11,7 @@ Setup scripts, Caddy/systemd templates, runbooks and backup tooling for the **4 
 | Mail VM (Lightsail) | `52.66.111.138` | NextDP Mail, dithim.com, catch-all maintenance page | `scripts/mail-vm/` |
 | Web-1 (Lightsail) | `3.6.143.66` | PHP 8.4 + static sites, domains.rajesh.app, CConsole Hub | `scripts/web-1-vm/` |
 | Apps-Core-VM (EC2) | `43.204.42.99` | Next iDP, NextDP Core, LocalCen | `scripts/apps-core-vm/` |
+| LocalCen-1-VM (EC2) | `3.111.132.3` | LocalCen (dedicated), NextBuilder later | `scripts/localcen-1-vm/` |
 | DNS VM (EC2) | `52.66.165.1` / `52.66.25.51` | PowerDNS `ns1/ns2.nextdp.com`, dns-service | `scripts/dns-vm/` |
 
 ## Layout

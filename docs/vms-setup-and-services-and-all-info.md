@@ -15,6 +15,7 @@ One place to look up what runs where on the AWS servers that replaced the Azure/
 | **Mail VM** | `52.66.111.138` | Lightsail `NextDP-Mail-VM` (private `172.26.3.188`) | t3.small: 2 vCPU, 1.9 GB RAM + 2 GB swap, 58 GB disk (13% used) | ap-south-1a | NextDP Mail (SMTP/IMAP/POP3 + 3 web consoles), dithim.com, catch-all maintenance page |
 | **Web-1** | `3.6.143.66` | Lightsail (private `172.26.9.186`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 58 GB (11%) | ap-south-1a | PHP 8.4 + static sites (OGCEN, domains app, CConsole Hub, ~35 domains) |
 | **Apps-Core-VM** | `43.204.42.99` | EC2 `i-0eee8167ad7ff9be0` (private `172.31.2.129`) | t3.large: 2 vCPU, 7.8 GB + 2 GB swap, 48 GB (11%) | ap-south-1b | Next iDP (`accounts.<brand>`), NextDP Core, LocalCen |
+| **LocalCen-1-VM** | `3.111.132.3` (Elastic IP) | EC2 `i-007e720a8c578aad7` (private `172.31.8.71`) | t2.medium: 2 vCPU, 3.9 GB + 2 GB swap, 48 GB gp3 | ap-south-1b | LocalCen (dedicated, customer domains via on-demand TLS); NextBuilder later. **Added 2026-11-20, move in progress** (section 5b) |
 | **DNS VM** | `52.66.165.1` (**ns1**) + `52.66.25.51` (**ns2**) | EC2 `i-0fe9b807d4d2fad7d` (2 private IPs `172.31.14.174`, `172.31.11.141`) | t3.small: 2 vCPU, 1.9 GB + 2 GB swap, 29 GB (17%) | ap-south-1b | PowerDNS authoritative `ns1/ns2.nextdp.com` + dns-service UI/API |
 
 All four: Ubuntu 24.04.5 LTS, timezone UTC, PostgreSQL 16.15 (localhost only), Caddy v2.11.9 (automatic HTTPS), Amazon SSM agent.
@@ -105,6 +106,23 @@ Also: `redis-server` (127.0.0.1), `postgresql@16-main`, timer `apps-core-diskche
 
 ---
 
+## 5b. LocalCen-1-VM (`3.111.132.3`)
+
+Dedicated VM for LocalCen, so it can be resized with sales without touching Next iDP / NextDP Core. NextBuilder (website builder) will join later. Security group `sg-00637efb7a2d3b0d2`: tcp 22/80/443 + udp 443. Inside: `ufw` (same ports) + `fail2ban`.
+
+**Status 2026-11-20:** base setup, data copy and app deploy done; LocalCen runs and is healthy on `127.0.0.1:8092`. **Not public yet**: the 4 console hostnames still point to Apps-Core-VM until the DNS switch, and Caddy serves only a placeholder until `04-setup-caddy.ps1 -Apply`.
+
+| Item | Value |
+|---|---|
+| App | `/srv/apps/localcen/{releases,current,shared}`, user `webapps`, units `localcen`, `localcen-worker`, timer `localcen-cleanup` (03:45 UTC). Port `8092` (kept from Apps-Core) |
+| Hostnames | `localcen.cconsole.com`, `console.localcen.com` (tenant console), `admin.localcen.cconsole.com`, `admin.localcen.com` (admin console), plus **every customer domain** through the `https://` catch-all with **on-demand TLS**. The ask goes to LocalCen `/internal/tls-allow`, so no per-domain config is needed. Customer DNS is checked by LocalCen against `LOCAL_HOST_SERVER_IPS=3.111.132.3` |
+| Caddy | `templates/Caddyfile.localcen-1-vm` (dedicated mode from `localcen/deploy/caddy/Caddyfile`). There is no shared-Caddy member sync, so `CADDY_SYNC_SPOOL` was removed from `.env` |
+| Database | PostgreSQL 16.15 local: `localcen_db` (owner `localcen_u`), copied from Apps-Core-VM 2026-11-20 (46 tables, 54 migrations, 3 disabled shared domains `gramam.in`, `pattanam.in`, `constituency.in`, 0 tenants). No Redis (LocalCen uses the DB for sessions/queue and in-memory cache) |
+| Secrets (paths) | `/root/.localcen-1-secrets.env` (DB password), `/srv/apps/localcen/shared/.env` (copied from Apps-Core; DB password and server IP changed) |
+| Backups | ❌ none yet. **Needed before the first customer** (TODO) |
+| Scripts | `scripts/localcen-1-vm/01-server-setup`, `02-copy-localcen-data` (one-time), `03-deploy-localcen` (build + deploy, repeatable), `04-setup-caddy` (`-Apply` after DNS) |
+| Repo | `projects/platform/localcen` (`raiworks/localcen`, deployed `3a3f41b`) |
+
 ## 6. DNS VM (`52.66.165.1` ns1 + `52.66.25.51` ns2)
 
 **Services:** `pdns` (PowerDNS authoritative, `:53` on both private IPs), `dns-service` (`:8080`, behind Caddy) + `dns-service-scheduler`, `caddy` (`dns.cconsole.com`, `admin.dns.cconsole.com`), `postgresql@16-main`, timer `dns-vm-diskcheck`, `fail2ban`.
@@ -154,6 +172,7 @@ Mail VM's CoreDNS (wildcard fallback answering `A`→Mail VM, `MX`→`mx.nextdp.
 | Web-1 | ✅ | `aws-web-1/` (id `f7fa98a985`) | 02:45 IST nightly | Sun 04:30 IST, `domains_rajesh` | `private-data/web-1-offsite-backup.env` |
 | Apps-Core-VM | ❌ | — | — | — | — |
 | DNS VM | ❌ | — | — | — | — |
+| LocalCen-1-VM | ❌ (before first customer) | planned `aws-sites-1/` → `aws-localcen-1/` | — | — | — |
 
 - Same tool on both (`/usr/local/sbin/nextdp-offsite-backup`, source `templates/backup/nextdp-offsite-backup.sh`, per-VM `backup.conf`). It dumps **every** DB on the VM, makes safe SQLite copies, backs up files and configs, keeps 14 daily / 8 weekly / 12 monthly, and mails `rajesh@nextdp.com` on failure. Web-1 mails through the Mail VM's private IP `172.26.3.188:25`.
 - **Old NMC/Azure backups** (read-only reference): R2 `nxtmngr-test/prod-main/`, 698 snapshots, latest per DB on 16–18 Nov (full table in [`session-handover-2026-11-19.md`](session-handover-2026-11-19.md) section 3). Unlocking needs `JWT_SECRET` (`private-data/nmc-main-env.txt`) plus the NMC DB on the Mail VM `:5433`. Do not write to `prod-main/`.

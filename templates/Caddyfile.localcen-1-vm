@@ -1,0 +1,83 @@
+# LocalCen-1-VM (3.111.132.3) - dedicated Caddy for LocalCen (:8092).
+# Installed by scripts/localcen-1-vm/04-setup-caddy.ps1 (only after the console hosts point here).
+# Based on projects/platform/localcen/deploy/caddy/Caddyfile (dedicated-server mode).
+# Customer domains: the https:// catch-all gets certificates ON DEMAND; the global ask asks LocalCen
+# (/internal/tls-allow = active host + site + tenant only), so no per-domain config is ever needed.
+# When NextBuilder joins this VM, put an ask multiplexer in front (see templates/caddy/apps-core-tls-ask.py).
+{
+	on_demand_tls {
+		ask http://127.0.0.1:8092/internal/tls-allow
+	}
+	servers {
+		trusted_proxies static private_ranges
+		timeouts {
+			read_header 15s
+			idle 2m
+		}
+	}
+}
+
+(lc_console) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+	handle /v1/* {
+		reverse_proxy 127.0.0.1:8092
+	}
+	# OIDC BFF routes + the refusal page live in the Go binary.
+	handle /auth/* {
+		reverse_proxy 127.0.0.1:8092
+	}
+	handle /no-access {
+		reverse_proxy 127.0.0.1:8092
+	}
+}
+
+admin.localcen.cconsole.com, admin.localcen.com {
+	import lc_console
+	handle {
+		root * /srv/apps/localcen/current/consoles/admin
+		try_files {path} /index.html
+		file_server
+	}
+	log {
+		output file /var/log/caddy/admin-localcen.access.log
+	}
+}
+
+localcen.cconsole.com, console.localcen.com {
+	import lc_console
+	handle {
+		root * /srv/apps/localcen/current/consoles/tenant
+		try_files {path} /index.html
+		file_server
+	}
+	log {
+		output file /var/log/caddy/localcen.access.log
+	}
+}
+
+import /etc/caddy/sites-enabled/*.caddy
+
+# Customer (member) domains. Named hosts above always win. /internal/* must NOT be proxied: Caddy connects from
+# 127.0.0.1, which would satisfy the app's loopback guard.
+https:// {
+	tls {
+		on_demand
+	}
+	encode zstd gzip
+	@internal path /internal/*
+	respond @internal 404
+	reverse_proxy 127.0.0.1:8092
+	log {
+		output file /var/log/caddy/public-localcen.access.log
+	}
+}
+
+http:// {
+	redir https://{host}{uri} 308
+}
