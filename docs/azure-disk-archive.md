@@ -15,7 +15,7 @@ Owner decisions (2026-11-21): only the `env` archive is encrypted — database d
 | **Recovery-VM** | EC2 `16.4.71.66` (private `172.31.31.33`), `m6i.large` 2 vCPU / 7.6 GB, `ap-south-1c`, Ubuntu 24.04 | made by the owner; key `private-data/dithim-aws.pem`; entry `Recovery-VM` in `private-data/vms-details.txt`. **Temporary**: terminate it (and its volume) when §4 is all ✅. As EC2, uploads to R2 are AWS outbound transfer (~$0.09–0.11 / GB) |
 | Work volume | `/work` (250 GB gp3, ext4, label `work`, fstab `nofail`) | `/work/disks/<disk>/` = VHD + read-only mounts (deleted per disk); `/work/out/<disk>/` = the exports before upload |
 | **Bucket** | Cloudflare R2 **`raiworks-azure-archive`** (APAC hint, Standard, private, no public access) | API token `recovery-vm-azure-archive`: Object Read & Write on this bucket only. Values: `private-data/r2-azure-archive.env` → VM `/root/.r2-azure-archive.env` (0600) → rclone remote `archive` (`/root/.config/rclone/rclone.conf`, root only) |
-| Archive passphrase | `ARCHIVE_PASSPHRASE` in `private-data/r2-azure-archive.env` | encrypts every `env` / secret archive (GnuPG symmetric, AES256). **Owner: keep a copy in the password manager** — without it those archives cannot be opened |
+| Archive passphrase | `ARCHIVE_PASSPHRASE` in `private-data/r2-azure-archive.env` | encrypts every `env` / secret archive (GnuPG symmetric, AES256). **One passphrase for all disks** (disks 1 and 3 checked 2026-11-21: the VM copy `/root/.r2-azure-archive.env` and the PC copy have the same sha256). **Owner: keep a copy in the password manager** — without it those archives cannot be opened |
 | Scripts | `scripts/recovery-vm/` | `01-setup` (volume, PostgreSQL 16 binaries, AzCopy, rclone, bucket test) · `02-disk` (download / inspect / umount / cleanup) · `03-export` (dumps + archives + manifest + upload, per disk) |
 | Azure access | `az` CLI on this PC (subscription `Azure subscription 1`) | read only: `az disk grant-access --access-level Read` (4 h SAS, never printed, PC → VM as a 0600 file) and `revoke-access` in `finally`. Nothing in Azure is changed or deleted |
 
@@ -63,7 +63,7 @@ Safety rules: Azure read only; the disk image is never mounted writable; secrets
 
 ## 6. After the archive (follow-ups)
 - ✅ **LocalCen places** (from disk 1, 2026-11-21): the packs `36-2026-11-08` + `28-2026-11-08` loaded with `scripts/localcen-1-vm/07-import-geo-packs` (§7). Owner: set up `lewiai.com`'s place.
-- Old SMS service `APP_KEY` + Firebase key (disk 3) → the owner decides whether to bring back old message bodies / push.
+- Old SMS service `APP_KEY` + Firebase key — **archived** (disk 3, 2026-11-21): `nmc-apps-1-osdisk/env.tar.zst.gpg` → `etc/r1sms/backend.env` (+ 3 older `.bak` copies) and `etc/r1sms/fcm-service-account.json`; code in `code/opt/r1sms.tar.zst`. The owner decides whether to bring back old message bodies / push.
 - Terminate Recovery-VM + its volume; delete the R2 token (or let its TTL end); a read-only token for restores when needed.
 - Lifecycle on the bucket: Standard → Infrequent Access after the restores are done.
 - Decide with the owner whether the Azure disks can then be deleted (not before every row in §4 is ✅ and spot-restored).
