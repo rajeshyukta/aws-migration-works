@@ -44,6 +44,13 @@ try {
     try {
         & go -C (Join-Path $lcRepo "backend") build -trimpath -ldflags "-s -w -X github.com/raiworks/localcen/app/idp.BuildVersion=$stamp" -o (Join-Path $stage "localcen") ./cmd
         if ($LASTEXITCODE -ne 0) { throw "go build failed" }
+        # 2026-11-21: the 20261120T160221 release embedded the placeholder ("Editor build not bundled.") at /app.
+        # Refuse a binary that does not carry the built app.
+        $binText = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes((Join-Path $stage "localcen")))
+        if (-not $binText.Contains("LocalCen app</title>") -or $binText.Contains("Editor build not bundled")) {
+            throw "the binary does not embed frontend/app/dist (placeholder found)"
+        }
+        Write-Host "    binary embeds the built app (checked)"
     } finally {
         Remove-Item Env:GOOS, Env:GOARCH, Env:CGO_ENABLED -ErrorAction SilentlyContinue
         & git -C $lcRepo checkout -- backend/resources/app/index.html 2>$null

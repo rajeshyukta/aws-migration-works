@@ -125,7 +125,7 @@ Dedicated VM for LocalCen, so it can be resized with sales without touching Next
 | Secrets (paths) | `/root/.localcen-1-secrets.env` (DB password), `/srv/apps/localcen/shared/.env` (copied from Apps-Core; DB password and server IP changed) |
 | Backups | ❌ none yet. **Needed before the first customer** (TODO) |
 | Scripts | `scripts/localcen-1-vm/01-server-setup`, `02-copy-localcen-data` (one-time), `03-deploy-localcen` (build + deploy, repeatable), `04-setup-caddy` (`-Apply` after DNS) |
-| Repo | `projects/platform/localcen` (`raiworks/localcen`, deployed **`df9f633`** = latest `main`, release `20261120T160221`, 2026-11-20; previous release kept) |
+| Repo | `projects/platform/localcen` (`raiworks/localcen`, deployed **`df9f633`** = latest `main`, release `20261121T061531 (2026-11-21 rebuild of the same `df9f633`: the 20261120T160221 release had the placeholder "Editor build not bundled." at `/app`; `03-deploy-localcen` now refuses such a binary)`, 2026-11-20; previous release kept) |
 | Integration | Next iDP + NextDP Core wiring in progress: [`localcen-saas-integration.md`](localcen-saas-integration.md). `IDP_LOGIN=true` since 2026-11-20 (consoles sign in through `accounts.cconsole.com`; script `scripts/localcen-1-vm/05-wire-localcen-idp`, `.env` backup `/var/backups/localcen/pre-idp-env-20261120T194421Z/`). Backup before the change: `/var/backups/localcen/pre-idp-20261120T155026Z/` (+ `D:\nmc-backup\localcen-1\`) |
 
 ## 6. DNS VM (`52.66.165.1` ns1 + `52.66.25.51` ns2)
