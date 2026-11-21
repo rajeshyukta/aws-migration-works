@@ -47,8 +47,8 @@ Disk names and resource groups: §4 of the archive doc. After each disk: show th
 |---|---|
 | ~~`nmc-db-1-osdisk`~~ ✅ 2026-11-21 | done: 11 databases. Loose manual `*.dump` files in `/var/lib/postgresql/` are now packed by `step_files` (`files/var-lib-postgresql-dumps.tar.zst`) |
 | ~~`nmc-apps-1-osdisk`~~ ✅ 2026-11-21 | done: secret JSONs (Firebase, GCP) sit in `/etc/<app>/` → in the env archive; check other disks for `*.json` keys outside `/etc` the same way (§7 of the archive doc) |
-| `WorkStation_DataDisk_0` | **NTFS data disk, no Linux root** (`/etc/os-release` missing) → `03-export.sh` stops with "no mounted root filesystem". Needs a small new step: archive the mounted NTFS volume per top-level folder (e.g. `workspace/<repo>.tar.zst`), env / key files into the env archive. Add it to `03-export.sh` (e.g. `STEP=data`), test, log it |
-| `nmc-s3-1-data` | **data disk, no OS** (MinIO objects) → same as above: archive per bucket folder |
+| ~~`WorkStation_DataDisk_0`~~ ✅ 2026-11-21 | done: `STEP=data` added to `03-export.sh` (auto-selected when `/etc/os-release` is missing); `ntfs-3g` on Ubuntu worked cleanly, 28 GiB uploaded |
+| `nmc-s3-1-data` | **data disk, no OS** (MinIO objects) → uses the new `STEP=data` automatically |
 | `esangh-dev-1_OsDisk_…` | unattached OS disk; normal path |
 | `nmc-db-2-osdisk` | the standby replica: its data dir has `standby.signal`; the temporary cluster starts in recovery (read-only), `pg_dump` still works. If it does not start, compare with db-1 and log it |
 | `nmc-idp-1`, `nmc-mail-1`, `nmc-main`, `nmc-dns-1/-2` | normal path; a PostgreSQL other than 16 is skipped with a message — install `postgresql-<ver>` (PGDG apt) on Recovery-VM and rerun `-Step pg` |

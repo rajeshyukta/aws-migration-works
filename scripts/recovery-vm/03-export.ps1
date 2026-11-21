@@ -1,10 +1,10 @@
-# Export one inspected Azure disk on Recovery-VM into the R2 archive bucket (docs/azure-disk-archive.md §3, §5).
+﻿# Export one inspected Azure disk on Recovery-VM into the R2 archive bucket (docs/azure-disk-archive.md §3, §5).
 #   .\scripts\recovery-vm\03-export.ps1 -Disk nmc-php-stage-1-osdisk            # all steps: pg env code files upload
 #   .\scripts\recovery-vm\03-export.ps1 -Disk nmc-php-stage-1-osdisk -Step pg   # one step
 # Needs 02-disk -Mode download + inspect first. Nothing secret is printed.
 param(
     [Parameter(Mandatory)] [string]$Disk,
-    [ValidateSet("all", "pg", "env", "code", "files", "upload")] [string]$Step = "all"
+    [ValidateSet("all", "pg", "env", "code", "files", "data", "upload")] [string]$Step = "all"
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
