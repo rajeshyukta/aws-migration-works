@@ -7,6 +7,7 @@
 #   code  : /srv/<group>/<app>, /srv/<x>, /opt/<x>, /var/www/<x> -> code/<path>.tar.zst  (no node_modules; env / key
 #           files left out: they are in env)
 #   files : /var/lib (without postgresql) incl. mysql raw files, /var/backups, /home, /usr/local -> files/*.tar.zst
+#           + loose *.dump / *.sql files in /var/lib/postgresql -> files/var-lib-postgresql-dumps.tar.zst
 #   upload: MANIFEST.sha256 + inspect.txt, rclone copy to archive:$R2_BUCKET/$DISK/, rclone check --download (byte compare)
 set -Eeuo pipefail
 exec 2>&1
@@ -100,6 +101,12 @@ step_code() {
 step_files() {
   log "files"
   [ -d "$ROOT/var/lib" ] && pack var/lib files/var-lib.tar.zst --exclude='var/lib/postgresql' --exclude='var/lib/snapd' --exclude='var/lib/apt' --exclude='var/lib/dpkg' "${SECRET_EXCL[@]}"
+  # loose manual dumps next to the clusters (e.g. /var/lib/postgresql/<db>-pre-<x>.dump): var-lib above skips that folder
+  local pgx; pgx=$(cd "$ROOT" && find var/lib/postgresql -maxdepth 2 -type f \( -name '*.dump' -o -name '*.sql' -o -name '*.sql.gz' -o -name '*.backup' \) 2>/dev/null || true)
+  if [ -n "$pgx" ]; then
+    tar -C "$ROOT" -cf - $pgx | $ZST > "$OUT/files/var-lib-postgresql-dumps.tar.zst"
+    log "  files/var-lib-postgresql-dumps.tar.zst $(du -h "$OUT/files/var-lib-postgresql-dumps.tar.zst" | cut -f1) ($(echo "$pgx" | wc -l) files)"
+  fi
   for x in var/backups home usr/local; do [ -d "$ROOT/$x" ] && pack "$x" "files/$(echo "$x" | tr '/' '-').tar.zst" "${SECRET_EXCL[@]}"; done
 }
 
