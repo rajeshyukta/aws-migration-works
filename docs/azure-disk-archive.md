@@ -1,8 +1,8 @@
 # Azure disk archive — every old Azure disk into one private R2 bucket
 
-> **Owner**: Rajesh · **Started**: 2026-11-21 · **Status**: 🟡 in progress — 5 of 12 disks done (1 skipped) · keep this file current: every run updates §4 (status), §7 (log) and, if something changed, §5 (procedure).
+> **Owner**: Rajesh · **Started**: 2026-11-21 · **Status**: 🟡 in progress — 5 of 12 disks done (2 skipped) · keep this file current: every run updates §4 (status), §7 (log) and, if something changed, §5 (procedure).
 > **Working on it from another chat / IDE?** Read [`azure-disk-archive-agent-guide.md`](azure-disk-archive-agent-guide.md) first.
-> **▶ Resume here**: disks 1 **`nmc-php-stage-1-osdisk`**, 2 **`nmc-db-1-osdisk`**, 3 **`nmc-apps-1-osdisk`**, 4 **`WorkStation_DataDisk_0`**, and 6 **`nmc-idp-1-osdisk`** ✅; disk 5 **`nmc-s3-1-data`** ⏭️ skipped (2026-11-21, owner: not needed). Next: disk 7 **`nmc-mail-1-osdisk`** (Email). Owner task open: copy `ARCHIVE_PASSPHRASE` into the password manager (TODO).
+> **▶ Resume here**: disks 1 **`nmc-php-stage-1-osdisk`**, 2 **`nmc-db-1-osdisk`**, 3 **`nmc-apps-1-osdisk`**, 4 **`WorkStation_DataDisk_0`**, and 6 **`nmc-idp-1-osdisk`** ✅; disks 5 **`nmc-s3-1-data`** & 7 **`nmc-mail-1-osdisk`** ⏭️ skipped (2026-11-21, owner: not needed / already migrated). Next: disk 8 **`nmc-main-osdisk`** (or #9 `nmc-db-2`, #10/#11 `nmc-dns-1/-2`, #12 `esangh-dev-1`). Owner task open: copy `ARCHIVE_PASSPHRASE` into the password manager (TODO).
 
 ## 1. Why
 The Azure subscription was disabled on 2026-11-18 and the services were rebuilt on AWS (`vms-setup-and-services-and-all-info.md`). The R2 restic repo `nxtmngr-test/prod-main` holds daily dumps of most fleet databases (`azure-r2-restore.md`), but not everything: LocalCen's `localcen_db` (place data), several staging databases, every `.env` / secret, app code and uploads were only on the VM disks. The 12 Azure managed disks still exist (the VMs are deallocated). This work copies **all of them, once, into our own bucket**, so any old database, env or file can be restored later without Azure.
@@ -43,7 +43,7 @@ Restore anything: `rclone copy archive:raiworks-azure-archive/<disk>/<path> .` (
 | 4 | `WorkStation_DataDisk_0` (WorkStation, unattached, **NTFS**) | 128 | the old Azure workstation's `E:` (workspace, `temp/` incl. LocalCen's geo packs, tools) | ✅ 2026-11-21 — 122 objects, 28 GiB (§7) |
 | 5 | `nmc-s3-1-data` (rg-nextdp-data, unattached) | 64 | MinIO objects (Associate Works files) | ⏭️ skipped (2026-11-21, owner: not needed) |
 | 6 | `nmc-idp-1-osdisk` (WebServices) | 64 | Next iDP + Next Pay env, storage | ✅ 2026-11-21 — 11 objects, 194 MiB (§7) |
-| 7 | `nmc-mail-1-osdisk` (Email) | 30 | NextDP Mail env + mail files | ⏳ |
+| 7 | `nmc-mail-1-osdisk` (Email) | 30 | NextDP Mail env + mail files | ⏭️ skipped (2026-11-21, owner: already migrated to Mail VM) |
 | 8 | `nmc-main-osdisk` (rg-nmc-control) | 30 | NextManager Core (DB already recovered once, `azure-r2-restore.md`) | ⏳ |
 | 9 | `nmc-db-2-osdisk` (rg-nextdp-data) | 64 | the standby replica (a second copy of #2) | ⏳ |
 | 10 | `nmc-dns-1-osdisk` (DNS) | 30 | PowerDNS (its `pdns` DB was dumped 2026-11-20, `azure-r2-dns-zones.md`) | ⏳ |
@@ -89,3 +89,4 @@ Safety rules: Azure read only; the disk image is never mounted writable; secrets
   - **upload** — 121 files + manifest, 28 GiB (`28,494 MiB`) → `raiworks-azure-archive/WorkStation_DataDisk_0/`; `rclone check --download`: 0 differences, 122 matching. Restore test **from the bucket**: `env.tar.zst.gpg` decrypts (4,960 entries) with the same `ARCHIVE_PASSPHRASE`. `-Mode cleanup`: VHD deleted, `/work` 31 GB used (215 GB free).
 - **2026-11-21 — disk 5 `nmc-s3-1-data` ⏭️ skipped** (owner: not needed).
 - **2026-11-21 — disk 6 `nmc-idp-1-osdisk` ✅** (archived for safety; AWS Next iDP already rebuilt fresh). `02-disk -Mode download -ResourceGroup WebServices`: AzCopy 64 GiB in 10.1 min, VHD footer OK, SAS revoked. `-Mode inspect`: Ubuntu 24.04.5, hostname `nmc-idp-1`, 4.9 GB used; no PostgreSQL/MySQL (used `nmc-db-1`); `/opt/{nextidp,nextmanager-core,nextpay}`, `/home` 1.5 GB, `/usr/local` 270 MB; 14 systemd units. `03-export`: `pg` 0 clusters · `env` 28 entries → `env.tar.zst.gpg` 600 KB · `code` `opt/nextidp` 79 MB, `opt/nextmanager-core` 22 MB, `opt/nextpay` 13 MB · `files` `var-lib` 9.3 MB, `var-backups` 876 KB, `home` 19 MB, `usr-local` 54 MB · `upload` 10 files + manifest, 194 MiB → `raiworks-azure-archive/nmc-idp-1-osdisk/`; `rclone check --download`: 0 differences, 11 matching. Restore test **from the bucket**: `env.tar.zst.gpg` decrypts (2,217 entries; `etc/nextidp/env`, `etc/nextpay/env`, `etc/nextmanager-core/agent.env` OK); `code/opt/nextidp.tar.zst` lists 196 entries. `-Mode cleanup`: VHD deleted.
+- **2026-11-21 — disk 7 `nmc-mail-1-osdisk` ⏭️ skipped** (owner: NextDP Mail & old data already deployed on new Mail VM).
