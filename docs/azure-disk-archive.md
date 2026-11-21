@@ -1,6 +1,7 @@
 # Azure disk archive — every old Azure disk into one private R2 bucket
 
 > **Owner**: Rajesh · **Started**: 2026-11-21 · **Status**: 🟡 in progress — 1 of 12 disks done · keep this file current: every run updates §4 (status), §7 (log) and, if something changed, §5 (procedure).
+> **Working on it from another chat / IDE?** Read [`azure-disk-archive-agent-guide.md`](azure-disk-archive-agent-guide.md) first.
 > **▶ Resume here**: disk 1 **`nmc-php-stage-1-osdisk` ✅** (2026-11-21: 18 databases, envs, code, files in the bucket, verified; LocalCen's places loaded on LocalCen-1-VM). Next: disk 2 **`nmc-db-1-osdisk`** with the same three commands (§5). Owner task open: copy `ARCHIVE_PASSPHRASE` into the password manager (TODO).
 
 ## 1. Why
