@@ -1,8 +1,8 @@
 # Azure disk archive — every old Azure disk into one private R2 bucket
 
-> **Owner**: Rajesh · **Started**: 2026-11-21 · **Status**: 🟡 in progress — 5 of 12 disks done (2 skipped) · keep this file current: every run updates §4 (status), §7 (log) and, if something changed, §5 (procedure).
+> **Owner**: Rajesh · **Started**: 2026-11-21 · **Status**: ✅ done — 6 archived, 6 skipped (of 12 disks) · total in R2 `raiworks-azure-archive`: 318 objects, ~30.6 GiB.
 > **Working on it from another chat / IDE?** Read [`azure-disk-archive-agent-guide.md`](azure-disk-archive-agent-guide.md) first.
-> **▶ Resume here**: disks 1 **`nmc-php-stage-1-osdisk`**, 2 **`nmc-db-1-osdisk`**, 3 **`nmc-apps-1-osdisk`**, 4 **`WorkStation_DataDisk_0`**, and 6 **`nmc-idp-1-osdisk`** ✅; disks 5 **`nmc-s3-1-data`** & 7 **`nmc-mail-1-osdisk`** ⏭️ skipped (2026-11-21, owner: not needed / already migrated). Next: disk 8 **`nmc-main-osdisk`** (or #9 `nmc-db-2`, #10/#11 `nmc-dns-1/-2`, #12 `esangh-dev-1`). Owner task open: copy `ARCHIVE_PASSPHRASE` into the password manager (TODO).
+> **▶ Resume here**: **Archive complete (2026-11-21).** Archived & verified: #1 `nmc-php-stage-1-osdisk`, #2 `nmc-db-1-osdisk`, #3 `nmc-apps-1-osdisk`, #4 `WorkStation_DataDisk_0`, #6 `nmc-idp-1-osdisk`, #8 `nmc-main-osdisk`. Skipped per owner: #5 `nmc-s3-1-data`, #7 `nmc-mail-1-osdisk`, #9 `nmc-db-2-osdisk`, #10 `nmc-dns-1-osdisk`, #11 `nmc-dns-2-osdisk`, #12 `esangh-dev-1`. **Next (awaiting owner go-ahead):** terminate Recovery-VM + its 250 GB volume, revoke/expire the R2 write token, set bucket lifecycle (Standard → IA), and copy `ARCHIVE_PASSPHRASE` into the password manager (TODO).
 
 ## 1. Why
 The Azure subscription was disabled on 2026-11-18 and the services were rebuilt on AWS (`vms-setup-and-services-and-all-info.md`). The R2 restic repo `nxtmngr-test/prod-main` holds daily dumps of most fleet databases (`azure-r2-restore.md`), but not everything: LocalCen's `localcen_db` (place data), several staging databases, every `.env` / secret, app code and uploads were only on the VM disks. The 12 Azure managed disks still exist (the VMs are deallocated). This work copies **all of them, once, into our own bucket**, so any old database, env or file can be restored later without Azure.
@@ -44,11 +44,11 @@ Restore anything: `rclone copy archive:raiworks-azure-archive/<disk>/<path> .` (
 | 5 | `nmc-s3-1-data` (rg-nextdp-data, unattached) | 64 | MinIO objects (Associate Works files) | ⏭️ skipped (2026-11-21, owner: not needed) |
 | 6 | `nmc-idp-1-osdisk` (WebServices) | 64 | Next iDP + Next Pay env, storage | ✅ 2026-11-21 — 11 objects, 194 MiB (§7) |
 | 7 | `nmc-mail-1-osdisk` (Email) | 30 | NextDP Mail env + mail files | ⏭️ skipped (2026-11-21, owner: already migrated to Mail VM) |
-| 8 | `nmc-main-osdisk` (rg-nmc-control) | 30 | NextManager Core (DB already recovered once, `azure-r2-restore.md`) | ⏳ |
-| 9 | `nmc-db-2-osdisk` (rg-nextdp-data) | 64 | the standby replica (a second copy of #2) | ⏳ |
-| 10 | `nmc-dns-1-osdisk` (DNS) | 30 | PowerDNS (its `pdns` DB was dumped 2026-11-20, `azure-r2-dns-zones.md`) | ⏳ |
-| 11 | `nmc-dns-2-osdisk` (DNS) | 30 | PowerDNS ns2 | ⏳ |
-| 12 | `esangh-dev-1_OsDisk_1_…` (esangh-dev-rg, unattached) | 64 | eSangh dev server | ⏳ |
+| 8 | `nmc-main-osdisk` (rg-nmc-control) | 30 | NextManager Core (DB already recovered once, `azure-r2-restore.md`) | ✅ 2026-11-21 — 14 objects, 132 MiB, 2 databases (§7) |
+| 9 | `nmc-db-2-osdisk` (rg-nextdp-data) | 64 | the standby replica (a second copy of #2) | ⏭️ skipped (2026-11-21, owner: not needed) |
+| 10 | `nmc-dns-1-osdisk` (DNS) | 30 | PowerDNS (its `pdns` DB was dumped 2026-11-20, `azure-r2-dns-zones.md`) | ⏭️ skipped (2026-11-21, owner: not needed) |
+| 11 | `nmc-dns-2-osdisk` (DNS) | 30 | PowerDNS ns2 | ⏭️ skipped (2026-11-21, owner: not needed) |
+| 12 | `esangh-dev-1_OsDisk_1_…` (esangh-dev-rg, unattached) | 64 | eSangh dev server | ⏭️ skipped (2026-11-21, owner: not needed) |
 
 Total provisioned 696 GB; only used blocks are downloaded. Not on any disk any more: `nmc-cache-1` (Redis, nothing to keep).
 
@@ -90,3 +90,5 @@ Safety rules: Azure read only; the disk image is never mounted writable; secrets
 - **2026-11-21 — disk 5 `nmc-s3-1-data` ⏭️ skipped** (owner: not needed).
 - **2026-11-21 — disk 6 `nmc-idp-1-osdisk` ✅** (archived for safety; AWS Next iDP already rebuilt fresh). `02-disk -Mode download -ResourceGroup WebServices`: AzCopy 64 GiB in 10.1 min, VHD footer OK, SAS revoked. `-Mode inspect`: Ubuntu 24.04.5, hostname `nmc-idp-1`, 4.9 GB used; no PostgreSQL/MySQL (used `nmc-db-1`); `/opt/{nextidp,nextmanager-core,nextpay}`, `/home` 1.5 GB, `/usr/local` 270 MB; 14 systemd units. `03-export`: `pg` 0 clusters · `env` 28 entries → `env.tar.zst.gpg` 600 KB · `code` `opt/nextidp` 79 MB, `opt/nextmanager-core` 22 MB, `opt/nextpay` 13 MB · `files` `var-lib` 9.3 MB, `var-backups` 876 KB, `home` 19 MB, `usr-local` 54 MB · `upload` 10 files + manifest, 194 MiB → `raiworks-azure-archive/nmc-idp-1-osdisk/`; `rclone check --download`: 0 differences, 11 matching. Restore test **from the bucket**: `env.tar.zst.gpg` decrypts (2,217 entries; `etc/nextidp/env`, `etc/nextpay/env`, `etc/nextmanager-core/agent.env` OK); `code/opt/nextidp.tar.zst` lists 196 entries. `-Mode cleanup`: VHD deleted.
 - **2026-11-21 — disk 7 `nmc-mail-1-osdisk` ⏭️ skipped** (owner: NextDP Mail & old data already deployed on new Mail VM).
+- **2026-11-21 — disk 8 `nmc-main-osdisk` ✅** (archived for safety). `02-disk -Mode download -ResourceGroup rg-nmc-control`: AzCopy 30 GiB in 6.6 min, VHD footer OK, SAS revoked. `-Mode inspect`: Ubuntu 24.04.5, hostname `nmc.nextdp.com`, 7.6 GB used; PostgreSQL 16 `/var/lib/postgresql/16/main` 555 MB; `/opt/nextmanager-core`, `/var/www/nextmanager-core`, `/opt/nextmanager-core/.env`. `03-export`: `pg` `nextmanager_core` (497 MB, 49 tables, ~2.52M rows, dump 80 MB) + `postgres` (7.5 MB, 0 tables) · `env` 5 entries → `env.tar.zst.gpg` 600 KB · `code` `opt/nextmanager-core` 29 MB, `var_www/nextmanager-core` 992 KB · `files` `var-lib` 23 MB, `var-backups` 808 KB, `home`, `usr-local` · `upload` 13 files + manifest, 132 MiB → `raiworks-azure-archive/nmc-main-osdisk/`; `rclone check --download`: 0 differences, 14 matching. Restore test **from the bucket**: `nextmanager_core.dump` lists 49 tables with data; `env.tar.zst.gpg` decrypts (2,147 entries, `opt/nextmanager-core/.env` OK). `-Mode cleanup`: VHD deleted.
+- **2026-11-21 — disks 9–12 ⏭️ skipped** (`nmc-db-2-osdisk`, `nmc-dns-1-osdisk`, `nmc-dns-2-osdisk`, `esangh-dev-1_OsDisk_1_…`) per owner decision. **Total in R2 `raiworks-azure-archive`:** 318 objects, 31,354 MiB (~30.6 GiB).

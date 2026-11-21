@@ -49,9 +49,9 @@ Disk names and resource groups: §4 of the archive doc. After each disk: show th
 | ~~`nmc-apps-1-osdisk`~~ ✅ 2026-11-21 | done: secret JSONs (Firebase, GCP) sit in `/etc/<app>/` → in the env archive; check other disks for `*.json` keys outside `/etc` the same way (§7 of the archive doc) |
 | ~~`WorkStation_DataDisk_0`~~ ✅ 2026-11-21 | done: `STEP=data` added to `03-export.sh` (auto-selected when `/etc/os-release` is missing); `ntfs-3g` on Ubuntu worked cleanly, 28 GiB uploaded |
 | ~~`nmc-s3-1-data`~~ ⏭️ 2026-11-21 | skipped per owner (not needed) |
-| `esangh-dev-1_OsDisk_…` | unattached OS disk; normal path |
-| `nmc-db-2-osdisk` | the standby replica: its data dir has `standby.signal`; the temporary cluster starts in recovery (read-only), `pg_dump` still works. If it does not start, compare with db-1 and log it |
-| ~~`nmc-idp-1`~~ ✅, ~~`nmc-mail-1`~~ ⏭️, `nmc-main`, `nmc-dns-1/-2` | normal path; a PostgreSQL other than 16 is skipped with a message — install `postgresql-<ver>` (PGDG apt) on Recovery-VM and rerun `-Step pg` |
+| ~~`esangh-dev-1_OsDisk_…`~~ ⏭️ 2026-11-21 | skipped per owner (not needed) |
+| ~~`nmc-db-2-osdisk`~~ ⏭️ 2026-11-21 | skipped per owner (not needed; #2 `nmc-db-1` already archived) |
+| ~~`nmc-idp-1`~~ ✅, ~~`nmc-mail-1`~~ ⏭️, ~~`nmc-main`~~ ✅, ~~`nmc-dns-1/-2`~~ ⏭️ | `nmc-main` done (2026-11-21, 132 MiB, 2 DBs); others skipped per owner |
 
 ## 7. When everything is ✅
 Tell the owner, then (only with the owner's word): terminate Recovery-VM **and its 250 GB volume**, let the R2 token expire (or delete it), set the bucket lifecycle (Standard → Infrequent Access), and decide about deleting the Azure disks (not before every row in §4 is ✅ and spot-restored).
