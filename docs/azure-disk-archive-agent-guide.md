@@ -46,7 +46,7 @@ Disk names and resource groups: §4 of the archive doc. After each disk: show th
 | Disk | Watch for |
 |---|---|
 | `nmc-db-1-osdisk` | the main fleet databases; PostgreSQL 16 expected. Large `pg_dump`s take longer; that is fine |
-| `nmc-apps-1-osdisk` | many app `.env`s (old SMS `APP_KEY`, Firebase JSON): they must land in the env archive — check `env-filelist.txt` lists them |
+| ~~`nmc-apps-1-osdisk`~~ ✅ 2026-11-21 | done: secret JSONs (Firebase, GCP) sit in `/etc/<app>/` → in the env archive; check other disks for `*.json` keys outside `/etc` the same way (§7 of the archive doc) |
 | `WorkStation_DataDisk_0` | **NTFS data disk, no Linux root** (`/etc/os-release` missing) → `03-export.sh` stops with "no mounted root filesystem". Needs a small new step: archive the mounted NTFS volume per top-level folder (e.g. `workspace/<repo>.tar.zst`), env / key files into the env archive. Add it to `03-export.sh` (e.g. `STEP=data`), test, log it |
 | `nmc-s3-1-data` | **data disk, no OS** (MinIO objects) → same as above: archive per bucket folder |
 | `esangh-dev-1_OsDisk_…` | unattached OS disk; normal path |
