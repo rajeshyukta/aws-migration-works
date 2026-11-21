@@ -6,7 +6,7 @@
 ## 1. Why
 The Azure subscription was disabled on 2026-11-18 and the services were rebuilt on AWS (`vms-setup-and-services-and-all-info.md`). The R2 restic repo `nxtmngr-test/prod-main` holds daily dumps of most fleet databases (`azure-r2-restore.md`), but not everything: LocalCen's `localcen_db` (place data), several staging databases, every `.env` / secret, app code and uploads were only on the VM disks. The 12 Azure managed disks still exist (the VMs are deallocated). This work copies **all of them, once, into our own bucket**, so any old database, env or file can be restored later without Azure.
 
-Owner decisions (2026-11-21): archive all disks; a temporary recovery VM on AWS; a new R2 bucket (cheapest with free download, see the price check of 2026-11-21 in the chat: R2 Standard $0.015 / GB-month, no egress); first disk `nmc-php-stage-1` (LocalCen).
+Owner decisions (2026-11-21): only the `env` archive is encrypted — database dumps, code and files stay plain `.dump` / `.tar.zst` (private bucket, bucket-only token, R2 encryption at rest); one `.tar.zst` per app / site folder; archive all disks; a temporary recovery VM on AWS; a new R2 bucket (cheapest with free download, see the price check of 2026-11-21 in the chat: R2 Standard $0.015 / GB-month, no egress); first disk `nmc-php-stage-1` (LocalCen).
 
 ## 2. Pieces
 | Piece | Where | Notes |
